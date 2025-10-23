@@ -1,0 +1,114 @@
+{% extends "userbase.html" %}
+
+{% block title %}User Search - Travel Journal{% endblock %}
+
+{% block user_head %}
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-md-8">
+                <form method="GET" action="{{ url_for('user_search') }}" class="mb-4">
+                    <div class="row justify-content-center">
+                        <div class="col-md-8">
+                            <div class="input-group">
+                                <input type="text" class="form-control rounded-start-5" name="keyword" 
+                                       value="{{ keyword }}" placeholder="Enter username to search...">
+                                <button class="btn btn-dark rounded-end-5" type="submit">
+                                    <i class="bi bi-search"></i> Search
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block user_content %}
+    <div>
+        <section class="m-3 text-center mw-100" style="padding-top: 170px;">
+            <div class="row g-2">
+                {% if users and users|length > 0 %}
+                    {% for user in users %}
+                        <div class="col-sm-12 col-md-6 col-lg-4">
+                            <div class="card border-0 shadow-sm rounded-4">
+                                <div class="row g-0">
+                                    <div class="col-auto d-flex align-items-center justify-content-center ms-3">
+                                        {% if user['profile_image'] %}
+                                            <img src="{{ url_for('static', filename='file/uploads/' + user['profile_image']) }}" 
+                                                 class="rounded-circle" style="width: 80px; height: 80px; object-fit: cover;">
+                                        {% else %}
+                                            <div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center" 
+                                                 style="width: 80px; height: 80px;">
+                                                <i class="bi bi-person text-white fs-1"></i>
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                    <div class="col">
+                                        <div class="card-body text-start">
+                                            <div class="row">
+                                                <div class="col">
+                                                    <strong class="{% if session.user_id == user['id'] %}text-black{% endif %}">
+                                                        {{ user['first_name'] }} {{ user['last_name'] }}
+                                                    </strong>
+                                                </div>
+                                                <div class="col-auto text-end">
+                                                    <a href="{{ url_for('view_profile', user_id=user['id']) }}" 
+                                                       class="btn bg-white text-black border-0">
+                                                        <i class="bi bi-eye"></i>
+                                                    </a>
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="d-flex align-items-center">
+                                                    <span><i class="bi bi-person"></i>&nbsp; @{{ user['username'] }}</span>
+                                                </div>
+                                                {% if user['location_name'] %}
+                                                    <div class="d-flex align-items-center">
+                                                        <span><i class="bi bi-geo-alt"></i>&nbsp; {{ user['location_name'] }}</span>
+                                                    </div>
+                                                {% endif %}
+                                                <div class="text-end">
+                                                    <span class="badge bg-primary">
+                                                        {{ user['public_journeys_count'] }} Public Journeys
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12 text-center mt-5">
+                        <i class="bi bi-info-circle me-2"></i>
+                        {% if keyword %}
+                            No users found matching your search criteria.
+                        {% else %}
+                            No users available in the directory.
+                        {% endif %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <!-- pagination -->
+            {% if total_pages > 1 %}
+                <div id="pagination-container" class="d-flex justify-content-center mt-2 py-2">
+                    <nav>
+                        <ul class="pagination">
+                            {% for p in range(1, total_pages + 1) %}
+                                <li class="page-item {% if p == current_page %}active{% endif %}">
+                                    <a class="page-link" 
+                                       href="{{ url_for('user_search', page=p, keyword=keyword) }}">
+                                        {{ p }}
+                                    </a>
+                                </li>
+                            {% endfor %}
+                        </ul>
+                    </nav>
+                </div>
+            {% endif %}
+        </section>
+    </div>
+{% endblock %} 

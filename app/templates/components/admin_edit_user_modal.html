@@ -1,0 +1,123 @@
+<div class="modal fade" id="adminEditUserModal" tabindex="-1" aria-labelledby="adminEditUserModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4">
+            <div class="modal-header bg-black text-white border-0 rounded-top-4">
+                <h5 class="modal-title" id="adminEditUserModalLabel">Edit user(<span id="modalUsername"></span>)</h5>
+            </div>
+            <div class="modal-body border-0">
+                <form id="editUserForm" method="POST" action="{{ url_for('admin_edit_user') }}">
+                    <input type="hidden" name="user_id" id="editUserId">
+                    <div class="">
+                        <label for="statusSelect" class="form-label">Status</label>
+                        <select class="form-select rounded-4 border-0 bg-body-secondary" name="status" id="statusSelect">
+                            <option value="active" {% if status == "active" %}selected{% endif %}>Active</option>
+                            <option value="banned" {% if status == "banned" %}selected{% endif %}>Banned</option>
+                        </select>
+                    </div>
+                    <div class="">
+                        <label for="roleSelect" class="form-label">Role</label>
+                        <select class="form-select rounded-4 border-0 bg-body-secondary" {% if session.get('role') == "support_techs" %} disabled {% endif %} name="role" id="roleSelect">
+                            <option value="traveller" {% if role == "traveller" %}selected{% endif %}>Traveller</option>
+                            <option value="editor" {% if role == "editor" %}selected{% endif %}>Editor</option>
+                            <option value="moderator" {% if role == "moderator" %}selected{% endif %}>Moderator</option>
+                            <option value="admin" {% if role == "admin" %}selected{% endif %}>Admin</option>
+                            <option value="support_techs" {% if role == "support_techs" %}selected{% endif %}>Support Techs</option>
+                        </select>
+                    </div>
+                    <div class="form-check mt-3">
+                        <input class="form-check-input" type="checkbox" name="can_share" id="canShareCheck">
+                        <label class="form-check-label" for="canShareCheck">
+                            Allow Sharing
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn rounded-5 px-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="submit" form="editUserForm" class="btn btn-dark rounded-5 px-3" id="submitBtn" disabled>Submit
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const adminEditUserModal = document.getElementById('adminEditUserModal');
+        if (adminEditUserModal) {
+            adminEditUserModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const userId = button.getAttribute('data-user-id');
+                const userRole = button.getAttribute('data-user-role');
+                const username = button.getAttribute('data-user-username');
+                const userStatus = button.getAttribute('data-user-status');
+                const canShare = button.getAttribute('data-user-can-share') === 'true' || button.getAttribute('data-user-can-share') === null;
+
+                // set user id
+                this.querySelector('#editUserId').value = userId;
+
+                // set user role and status
+                this.querySelector('#roleSelect').value = userRole;
+                this.querySelector('#roleSelect').setAttribute('data-original-role', userRole);
+                this.querySelector('#statusSelect').value = userStatus;
+                this.querySelector('#statusSelect').setAttribute('data-original-status', userStatus);
+                
+                // set can_share checkbox
+                const canShareCheck = this.querySelector('#canShareCheck');
+                canShareCheck.checked = canShare;
+                canShareCheck.setAttribute('data-original-can-share', canShare);
+
+                document.getElementById('modalUsername').textContent = username;
+            });
+        }
+    });
+
+    document.getElementById('editUserForm').addEventListener('input', function () {
+        const originalRole = document.getElementById('roleSelect').getAttribute('data-original-role');
+        const originalStatus = document.getElementById('statusSelect').getAttribute('data-original-status');
+        const originalCanShare = document.getElementById('canShareCheck').getAttribute('data-original-can-share') === 'true';
+        const currentRole = document.getElementById('roleSelect').value;
+        const currentStatus = document.getElementById('statusSelect').value;
+        const currentCanShare = document.getElementById('canShareCheck').checked;
+        const submitBtn = document.getElementById('submitBtn');
+
+        if (originalRole !== currentRole || originalStatus !== currentStatus || originalCanShare !== currentCanShare) {
+            submitBtn.disabled = false;
+        } else {
+            submitBtn.disabled = true;
+        }
+    });
+
+    document.getElementById('editUserForm').addEventListener('submit', async function(e) {
+        e.preventDefault();
+        
+        // get data from request FormData
+        const form = document.getElementById('editUserForm');
+        const formDataObj = new FormData(form);
+        
+        // convert FormData to a plain object
+        const formData = {
+            user_id: formDataObj.get('user_id'),
+            role: formDataObj.get('role'),
+            status: formDataObj.get('status'),
+            can_share: document.getElementById('canShareCheck').checked
+        };
+
+        try {
+            const response = await apiRequest('/admin/edit/user', 'POST', formData);
+            if (response.success) {
+                showMessage('User updated successfully', 'success');
+                // hide the modal
+                const modal = bootstrap.Modal.getInstance(adminEditUserModal);
+                if (modal) {
+                    modal.hide();
+                }
+                // reload the page after 1 second
+                setTimeout(() => { window.location.reload(); }, 600);
+            }
+        } catch (error) {
+            showMessage(error.message || 'Failed to update user', 'error');
+        }
+    });
+</script>

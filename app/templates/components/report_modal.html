@@ -1,0 +1,32 @@
+<!-- Report modal -->
+<div class="modal fade" id="reportModal" tabindex="-1" aria-labelledby="reportModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4">
+            <div class="modal-header bg-danger text-white border-0 rounded-top-4 px-4">
+                <h5 class="modal-title" id="reportModalLabel">Report Comment</h5>
+            </div>
+            <div class="modal-body border-0 p-4">
+                <form id="reportForm">
+                    <input type="hidden" id="reportCommentId">
+                    <div class="mb-3">
+                        <label for="reportType" class="form-label">Report Type</label>
+                        <select class="form-select" id="reportType" required>
+                            <option value="">Select report type</option>
+                            <option value="abusive">Abusive Content</option>
+                            <option value="offensive">Offensive Content</option>
+                            <option value="spam">Spam</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label for="reportContent" class="form-label">Details</label>
+                        <textarea class="form-control" id="reportContent" rows="3" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 p-4">
+                <button type="button" class="btn rounded-5 px-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger rounded-5 px-3" onclick="submitReport()">Submit Report</button>
+            </div>
+        </div>
+    </div>
+</div> 

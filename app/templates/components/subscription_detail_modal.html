@@ -1,0 +1,167 @@
+<!-- Subscription Detail Modal -->
+<!-- Add html2canvas library -->
+<script src="https://html2canvas.hertzen.com/dist/html2canvas.min.js"></script>
+
+<div class="modal fade" id="subscriptionDetailModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content border-0 rounded-4">
+            <div class="modal-header bg-black text-white border-0 rounded-top-4 px-4">
+                <h5 class="modal-title">
+                    <i class="bi bi-receipt me-2"></i>
+                    Subscription Detail
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body border-0 p-4">
+                <div class="row g-4">
+                    <!-- Basic Information Card -->
+                    <div class="col-12 col-lg-6">
+                        <div class="card h-100 border-0 rounded-4">
+                            <div class="card-body p-4">
+                                <h5 class="card-title mb-4">
+                                    <i class="bi bi-info-circle me-2"></i>
+                                    Basic Information
+                                </h5>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <tr class="py-2">
+                                            <td class="py-2">Plan:</td>
+                                            <td id="modalPlanName" class="text-end py-2"></td>
+                                        </tr>
+                                        <tr class="py-2">
+                                            <td class="py-2">Start Date:</td>
+                                            <td id="modalStartDate" class="text-end py-2"></td>
+                                        </tr>
+                                        <tr class="py-2">
+                                            <td class="py-2">End Date:</td>
+                                            <td id="modalEndDate" class="text-end py-2"></td>
+                                        </tr>
+                                        <tr class="py-2">
+                                            <td class="py-2">Type:</td>
+                                            <td id="modalSubscriptionType" class="text-end py-2"></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Payment Information Card -->
+                    <div class="col-12 col-lg-6">
+                        <div class="card h-100 border-0 rounded-4">
+                            <div class="card-body p-4">
+                                <h5 class="card-title mb-4">
+                                    <i class="bi bi-credit-card me-2"></i>
+                                    Payment Information
+                                </h5>
+                                <div class="table-responsive">
+                                    <table class="table table-sm">
+                                        <tr class="py-2">
+                                            <td class="py-2">Amount:</td>
+                                            <td id="modalPaymentAmount" class="text-end py-2"></td>
+                                        </tr>
+                                        <tr class="py-2">
+                                            <td class="py-2">GST:</td>
+                                            <td id="modalGstAmount" class="text-end py-2"></td>
+                                        </tr>
+                                        <tr class="py-2">
+                                            <td class="py-2">Billing Country:</td>
+                                            <td id="modalBillingCountry" class="text-end py-2"></td>
+                                        </tr>
+                                        <tr class="py-2">
+                                            <td class="py-2">Created At:</td>
+                                            <td id="modalCreatedAt" class="text-end py-2"></td>
+                                        </tr>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-4">
+                <button type="button" class="btn rounded-5 px-4" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-dark rounded-5 px-4" id="exportPdfBtn">
+                    <i class="bi bi-file-pdf me-2"></i>
+                    Export as PDF
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Show subscription detail
+    function showSubscriptionDetail(subscriptionId) {
+        // Set subscription ID in modal
+        document.getElementById('subscriptionDetailModal').dataset.subscriptionId = subscriptionId;
+        
+        apiRequest(`/subscription/detail?subscription_id=${subscriptionId}`)
+            .then(data => {
+                if (data.success) {
+                    const sub = data.subscription;
+
+                    // Update basic information
+                    document.getElementById('modalPlanName').textContent = sub.plan_name || 'N/A';
+                    document.getElementById('modalStartDate').textContent = sub.start_date ? new Date(sub.start_date).toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }) : 'N/A';
+                    document.getElementById('modalEndDate').textContent = sub.end_date ? new Date(sub.end_date).toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }) : 'N/A';
+                    document.getElementById('modalSubscriptionType').textContent =
+                        sub.is_free_trial ? 'Free Trial' :
+                            sub.granted_by_admin ? 'Admin Granted' : 'Paid Subscription';
+
+                    // Update payment information
+                    document.getElementById('modalPaymentAmount').textContent = sub.payment_amount ? `$${parseFloat(sub.payment_amount).toFixed(2)}` : 'N/A';
+                    document.getElementById('modalGstAmount').textContent = sub.gst_amount ? `$${parseFloat(sub.gst_amount).toFixed(2)}` : 'N/A';
+                    document.getElementById('modalBillingCountry').textContent = sub.billing_country || 'N/A';
+                    document.getElementById('modalCreatedAt').textContent = sub.created_at ? new Date(sub.created_at).toLocaleString('en-US', {
+                        year: 'numeric',
+                        month: '2-digit',
+                        day: '2-digit',
+                        hour: '2-digit',
+                        minute: '2-digit'
+                    }) : 'N/A';
+
+                    // Show modal
+                    new bootstrap.Modal(document.getElementById('subscriptionDetailModal')).show();
+                } else {
+                    showMessage(data.error || 'Failed to load subscription details', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showMessage('Failed to load subscription details', 'error');
+            });
+    }
+
+    // Export PDF functionality
+    document.getElementById('exportPdfBtn').addEventListener('click', function() {
+        const subscriptionId = document.getElementById('subscriptionDetailModal').dataset.subscriptionId;
+        if (!subscriptionId) {
+            showMessage('Subscription ID not found', 'error');
+            return;
+        }
+
+        // Show loading message
+        showMessage('Generating PDF...', 'info');
+        
+        // Create download link
+        const link = document.createElement('a');
+        link.href = `/subscription/export-pdf?subscription_id=${subscriptionId}`;
+        link.click();
+        
+        // Show success message
+        showMessage('PDF exported successfully!', 'success');
+    });
+</script> 

@@ -1,0 +1,15 @@
+{#username input component#}
+<div class="mb-3">
+    <input type="text"
+           class="form-control rounded-3 border-0 bg-body-secondary{% if username_error %} is-invalid{% endif %}"
+           id="username-input" name="username" placeholder="username"
+           pattern="^[a-zA-Z0-9_]{3,20}$"
+           value="{{ username }}" required>
+    <div class="invalid-feedback">
+        {% if username_error %}
+            {{ username_error }}
+        {% else %}
+            Username must be between 3 and 20 characters long and can only contain letters, numbers, and underscores.
+        {% endif %}
+    </div>
+</div>

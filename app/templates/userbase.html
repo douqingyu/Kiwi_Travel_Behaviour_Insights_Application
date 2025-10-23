@@ -1,0 +1,162 @@
+{% extends "base.html" %}
+
+{% block title %}LCC - Login{% endblock %}
+
+{% block header %}{% endblock %}
+
+{% block content %}
+    <div class="min-vh-100 d-flex flex-column">
+        <!-- Navbar for large screens -->
+        <nav class="navbar navbar-expand-sm navbar-dark fixed-top" id="mainNavbar"
+             style="background-color: transparent; transition: background-color 0.3s ease;">
+            <div class="container-fluid">
+                <a class="navbar-brand" href="/">
+                    <i class="bi bi-journal-richtext"></i>
+                    Travel Journal
+                </a>
+                {% if session.get('role') %}
+                    <button class="navbar-toggler order-last" type="button" data-bs-toggle="collapse"
+                            data-bs-target="#navbarSupportedContent" aria-controls="navbarSupportedContent"
+                            aria-expanded="false"
+                            aria-label="Toggle navigation">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <div class="collapse navbar-collapse text-center" id="navbarSupportedContent">
+                        <ul class="navbar-nav me-auto">
+                            <li class="nav-item">
+                                <a class="nav-link{{ ' active' if active_page=='dashboard' else '' }}"
+                                    href="{{ url_for('dashboard') }}">Dashboard</a>
+                            </li>
+                            {% if session.get('role') in ['admin', 'editor', 'support_techs'] or session.get('has_active_subscription') %}
+                            <li class="nav-item">
+                                <a class="nav-link{{ ' active' if active_page=='departure_board' else '' }}"
+                                    href="{{ url_for('departure_board') }}">Departure Board</a>
+                            </li>
+                            {% endif %}
+                            <li class="nav-item">
+                                <a class="nav-link{{ ' active' if active_page=='journeys' else '' }}"
+                                    href="{{ url_for('journeys') }}">Journeys</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link{{ ' active' if active_page=='users' else '' }}"
+                                    href="{{ url_for('user_search') }}">Users</a>
+                            </li>
+                            {% if session.get('role') in ['admin', 'moderator', 'editor', 'support_techs'] %}
+                            <li class="nav-item">
+                                <a class="nav-link{{ ' active' if active_page=='commentReports' else '' }}"
+                                    href="{{ url_for('comment_reports_page') }}">Comment Reports</a>
+                            </li>
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('helps') }}">Help Center</a>
+                            </li>
+                            {% endif %}
+                            <li class="nav-item">
+                                <a class="nav-link" href="{{ url_for('my_help_requests') }}">My Help Requests</a>
+                            </li>
+
+                            {% if session.get('role') in ['admin', 'support_techs'] %}
+                            <li class="nav-item">
+                                <a class="nav-link{{ ' active' if active_page=='userManagement' else '' }}"
+                                    href="{{ url_for('user_management') }}">Users Management</a>
+                            </li>
+                            {% endif %}
+                            {% if session.get('role') in ['admin'] %}
+                            <li class="nav-item">
+                                <a class="nav-link{{ ' active' if active_page=='edit_history' else '' }}"
+                                    href="{{ url_for('edit_history') }}">Edit History</a>
+                            </li>
+                            {% endif %}
+                            {% if session.get('role') in ['admin', 'editor'] %}
+                            <li class="nav-item">
+                                <a class="nav-link{{ ' active' if active_page=='appeals' else '' }}"
+                                    href="{{ url_for('appeals') }}">Journey Appeals</a>
+                            </li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                {% endif %}
+                <div class="ms-auto">
+                    {% if session.get('role') %}
+                        <div class="d-flex align-items-center gap-3">
+                            <a href="{{ url_for('messages') }}" class="btn bg-white text-black rounded-5 px-3 position-relative">
+                                <i class="bi bi-envelope"></i>
+                                {% if unread_messages_count and unread_messages_count > 0 %}
+                                <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger">
+                                    {{ unread_messages_count }}
+                                </span>
+                                {% endif %}
+                            </a>
+                            <ul class="navbar-nav mb-0">
+                                <li class="nav-item dropdown">
+                                    <a class="nav-link d-flex align-items-center gap-2 dropdown-toggle nav-link{{ ' active' if active_page=='user' else '' }}"
+                                       id="userDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                                        {% set profile_image = session.get('profile_image') %}
+                                        {% set first_name = session.get('first_name') %}
+                                        {% include 'components/avatar.html' %}
+                                        <span class="fs-6 d-none d-sm-inline">
+                                            {{ (session['first_name'] + ' ' + session['last_name'])[:10] }}
+                                            {{ '...' if (session['first_name'] + ' ' + session['last_name'])|length > 10 else '' }}
+                                        </span>
+                                    </a>
+                                    <ul class="dropdown-menu dropdown-menu-end position-absolute"
+                                        aria-labelledby="userDropdown">
+                                        <li><a class="dropdown-item p-3" href="{{ url_for('profile') }}">My Profile</a></li>
+                                        <li><a class="dropdown-item p-3" href="{{ url_for('subscriptions') }}">My Subscription</a></li>
+                                        {% if session.get('role') in ['admin', 'editor', 'support_techs'] or session.get('has_active_subscription') %}
+                                        <li><a class="dropdown-item p-3" href="{{ url_for('following') }}">Following</a></li>
+                                        {% endif %}
+                                        <li><a class="dropdown-item p-3" href="#" data-bs-toggle="modal"
+                                               data-bs-target="#resetPasswordModal">Reset Password</a></li>
+                                        <li><a class="dropdown-item p-3" href="#" data-bs-toggle="modal" data-bs-target="#helpSubmitModal">Help</a></li>
+                                        <li>
+                                            <a class="dropdown-item p-3 text-danger" href="#" data-bs-toggle="modal"
+                                               data-bs-target="#logoutModal">
+                                                <i class="bi bi-box-arrow-right me-2"></i>Log Out
+                                            </a>
+                                        </li>
+                                        
+                                    </ul>
+                                </li>
+                            </ul>
+                        </div>
+                    {% else %}
+                        <a href="{{ url_for('login') }}" class="btn bg-white text-black rounded-5 px-3">Login</a>
+                        <a href="{{ url_for('signup') }}" class="btn bg-white text-black rounded-5 px-3">Sign Up</a>
+                    {% endif %}
+                </div>
+            </div>
+        </nav>
+
+        {% include "components/logout_confirmation_modal.html" %}
+        {% include "components/reset_password_modal.html" %}
+        {% include "components/help_submit_modal.html" %}
+
+        <div class="flex-grow-1">
+            <div class="position-fixed top-0 start-0 w-100 bg-white shadow-sm" style="z-index: 1020; margin-top: 64px;">
+                {% block user_head %}{% endblock %}
+            </div>
+            {% block user_content %}{% endblock %}
+        </div>
+
+        {% include "components/footer.html" %}
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const navbar = document.getElementById('mainNavbar');
+            const isHomePage = window.location.pathname === '/';
+
+            if (isHomePage) {
+                window.addEventListener('scroll', function () {
+                    if (window.scrollY > 0) {
+                        navbar.style.backgroundColor = '#000000';
+                    } else {
+                        navbar.style.backgroundColor = 'transparent';
+                    }
+                });
+            } else {
+                navbar.style.backgroundColor = '#000000';
+            }
+        });
+    </script>
+{% endblock %}

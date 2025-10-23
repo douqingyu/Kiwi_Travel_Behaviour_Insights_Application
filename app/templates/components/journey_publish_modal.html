@@ -1,0 +1,37 @@
+<!-- Journey Publish Modal -->
+<div class="modal fade" id="journeyPublishModal{{ journey_id }}" tabindex="-1" aria-labelledby="journeyPublishModalLabel{{ journey_id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content rounded-4">
+            <div class="modal-header border-0">
+                <h5 class="modal-title" id="journeyPublishModalLabel{{ journey_id }}">
+                    {% if journey.is_published %}
+                        Unpublish Journey
+                    {% else %}
+                        Publish Journey
+                    {% endif %}
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p>
+                    {% if journey.is_published %}
+                        Are you sure you want to unpublish this journey? It will no longer be visible on the homepage.
+                    {% else %}
+                        Are you sure you want to publish this journey? It will be visible on the homepage for all visitors.
+                    {% endif %}
+                </p>
+            </div>
+            <div class="modal-footer border-0 p-4">
+                <button type="button" class="btn rounded-5 px-3" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('update_journey_published') }}" method="POST" class="d-inline">
+                    <input type="hidden" name="journey_id" value="{{ journey.id }}">
+                    <input type="hidden" name="is_published" value="{{ 0 if journey.is_published else 1 }}">
+                    <input type="hidden" name="tab" value="{{ tab }}">
+                    <button type="submit" class="btn btn-dark rounded-5 px-3">
+                        {% if journey.is_published %}Set as Unpublish{% else %}Set as Publish{% endif %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div> 

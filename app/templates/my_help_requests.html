@@ -1,0 +1,250 @@
+{% extends 'userbase.html' %}
+
+{% block title %}My Help Requests{% endblock %}
+
+{% block user_head %}
+    <div class="container col-md-8 py-3">
+        <div class="position-relative">
+            <div class="text-center">
+                <strong class="fs-4">My Help Requests</strong>
+            </div>
+        </div>
+        <div class="d-flex flex-column flex-md-row align-items-center justify-content-center gap-2 p-2 rounded-5 bg-body-secondary">
+            <div class="col-12">
+                <!-- Filter options -->
+                <div class="d-flex flex-wrap align-items-center justify-content-center gap-2 w-100">
+                    <!-- Status Filter -->
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="mb-0">Status:</label>
+                        <select class="form-select form-select-sm" id="statusFilter">
+                            <option value="all" {% if status == 'all' %}selected{% endif %}>All</option>
+                            <option value="new" {% if status == 'new' %}selected{% endif %}>New</option>
+                            <option value="in_progress" {% if status == 'in_progress' %}selected{% endif %}>In Progress</option>
+                            <option value="on_hold" {% if status == 'on_hold' %}selected{% endif %}>On Hold</option>
+                            <option value="resolved" {% if status == 'resolved' %}selected{% endif %}>Resolved</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block user_content %}
+    <section class="container pt-5 col-md-8 mt-5">
+        <!-- Help request list -->
+        <div class="list-group pt-5 mt-5">
+            {% if help_requests %}
+                {% for request in help_requests %}
+                    <div class="list-group-item list-group-item-action">
+                        <div class="d-flex w-100 justify-content-between align-items-center">
+                            <div>
+                                <h5 class="mb-1">
+                                    {{ request.title }}
+                                    <span class="badge bg-{{ request.status|status_color }} ms-2">
+                                        {{ request.status|replace('_', ' ')|title }}
+                                    </span>
+                                </h5>
+                                <p class="mb-1 text-muted">
+                                    <small>
+                                        Category: {{ request.category|title }}
+                                        {% if request.assigned_to %}
+                                            | Assigned to: {{ request.assigned_first_name }} {{ request.assigned_last_name }}
+                                        {% endif %}
+                                    </small>
+                                </p>
+                            </div>
+                            <div class="text-end">
+                                <small class="text-muted">{{ request.created_at }}</small>
+                                <br>
+                                <span class="badge bg-secondary">{{ request.reply_count }} Replies</span>
+                            </div>
+                        </div>
+                        <p class="mb-1 mt-2">
+                            {{ request.content[:200] }}{% if request.content|length > 200 %}...{% endif %}
+                        </p>
+                        <div class="mt-2">
+                            <button class="btn btn-sm btn-outline-primary view-request" data-request-id="{{ request.id }}">
+                                View Details
+                            </button>
+                            {% if request.status == 'resolved' %}
+                                <button class="btn btn-sm btn-warning reopen-request" data-request-id="{{ request.id }}">
+                                    Reopen
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="text-center py-5">
+                    <p class="text-muted">No help requests found</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+            <div id="pagination-container" class="d-flex justify-content-center mt-2 py-2">
+                {% include 'components/pagination.html' %}
+            </div>
+        {% endif %}
+    </section>
+
+    <!-- Request details modal -->
+    <div class="modal fade" id="requestModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="request-content mb-4"></div>
+                    <div class="replies-container"></div>
+                    <form id="replyForm" class="mt-4">
+                        <div class="mb-3">
+                            <textarea class="form-control" name="content" rows="3" placeholder="Enter your reply..." required></textarea>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Submit Reply</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const requestModal = new bootstrap.Modal(document.getElementById('requestModal'));
+            let currentRequestId = null;
+
+            // Status filter change handler
+            document.getElementById('statusFilter').addEventListener('change', function() {
+                const status = this.value;
+                window.location.href = `/my-help-requests?status=${status}`;
+            });
+
+            // View request details
+            document.querySelectorAll('.view-request').forEach(button => {
+                button.addEventListener('click', async function () {
+                    const requestId = this.dataset.requestId;
+                    currentRequestId = requestId;
+
+                    try {
+                        const response = await fetch(`/help/request/${requestId}`);
+                        const request = await response.json();
+
+                        if (response.ok) {
+                            const modal = document.getElementById('requestModal');
+                            modal.querySelector('.modal-title').textContent = request.title;
+                            modal.querySelector('.request-content').innerHTML = `
+                                <div class="card">
+                                    <div class="card-body">
+                                        <p class="card-text">${request.content}</p>
+                                        <div class="d-flex justify-content-between align-items-center mt-3">
+                                            <small class="text-muted">
+                                                Status: ${request.status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())}
+                                            </small>
+                                            <small class="text-muted">
+                                                ${new Date(request.created_at).toLocaleString()}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+
+                            // Load replies
+                            const repliesContainer = modal.querySelector('.replies-container');
+                            repliesContainer.innerHTML = '<h6 class="mt-4 mb-3">Replies</h6>';
+
+                            if (request.replies && request.replies.length > 0) {
+                                request.replies.forEach(reply => {
+                                    repliesContainer.innerHTML += `
+                                        <div class="card mb-3">
+                                            <div class="card-body">
+                                                <p class="card-text">${reply.content}</p>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-muted">
+                                                        ${reply.first_name} ${reply.last_name}
+                                                        (${reply.role})
+                                                    </small>
+                                                    <small class="text-muted">
+                                                        ${new Date(reply.created_at).toLocaleString()}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                });
+                            } else {
+                                repliesContainer.innerHTML += '<p class="text-muted">No replies yet</p>';
+                            }
+
+                            requestModal.show();
+                        } else {
+                            alert('Failed to get request details');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Failed to get request details');
+                    }
+                });
+            });
+
+            // Reopen request
+            document.querySelectorAll('.reopen-request').forEach(button => {
+                button.addEventListener('click', async function () {
+                    if (!confirm('Are you sure you want to reopen this request?')) {
+                        return;
+                    }
+
+                    const requestId = this.dataset.requestId;
+                    try {
+                        const response = await fetch(`/help/request/${requestId}/reopen`, {
+                            method: 'POST'
+                        });
+
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            const data = await response.json();
+                            alert(data.error || 'Failed to reopen request');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Failed to reopen request');
+                    }
+                });
+            });
+
+            // Submit reply
+            document.getElementById('replyForm').addEventListener('submit', async function (e) {
+                e.preventDefault();
+
+                if (!currentRequestId) return;
+
+                const content = this.querySelector('[name="content"]').value;
+
+                try {
+                    const response = await fetch(`/help/request/${currentRequestId}/reply`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: `content=${encodeURIComponent(content)}`
+                    });
+
+                    if (response.ok) {
+                        this.reset();
+                        window.location.reload();
+                    } else {
+                        const data = await response.json();
+                        alert(data.error || 'Failed to submit reply');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Failed to submit reply');
+                }
+            });
+        });
+    </script>
+{% endblock %} 

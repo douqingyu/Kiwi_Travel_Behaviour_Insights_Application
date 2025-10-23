@@ -1,0 +1,557 @@
+{% extends 'userbase.html' %}
+
+{% block title %}Departure Board{% endblock %}
+
+{# Set the active page to be highlighted in the navigation bar. #}
+{% set active_page = 'departure_board' %}
+
+
+{% block user_head %}
+<div class="container col-md-8 p-2">
+    <form method="post" action="/departure_board" class="d-flex flex-column gap-2">
+        <div class="d-flex flex-column flex-md-row align-items-center justify-content-center gap-2 p-2 rounded-5 bg-body-secondary">
+            <!-- Tab buttons -->
+            <div class="d-flex align-items-center justify-content-center gap-2 w-100 w-md-auto">
+                {% set tabs = [('journey', 'By Journey'), ('user', 'By User'), ('location', 'By Location')] %}
+                {% for value, label in tabs %}
+                <div class="flex-grow-1">
+                    <input type="radio" class="d-none" name="tab" id="{{ value }}Tab" value="{{ value }}" {% if
+                        tab==value %}checked{% endif %}>
+                    <label
+                        class="btn w-100 {% if tab == value %}btn-dark{% else %}bg-white btn-light{% endif %} rounded-5 border-0"
+                        for="{{ value }}Tab">{{ label }}</label>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    // submit form
+    document.querySelectorAll('input[name="tab"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            // change button style
+            document.querySelectorAll('input[name="tab"]').forEach(r => {
+                const label = document.querySelector(`label[for="${r.id}"]`);
+                if (label) {
+                    if (r.checked) {
+                        label.classList.remove('bg-white', 'btn-light');
+                        label.classList.add('btn-dark');
+                    } else {
+                        label.classList.remove('btn-dark');
+                        label.classList.add('bg-white', 'btn-light');
+                    }
+                }
+            });
+            this.form.submit();
+        });
+    });
+
+    // update notice and datalist when search type is changed
+    document.getElementById('searchType')?.addEventListener('change', function () {
+        const searchInput = document.getElementById('searchInput');
+        const locationList = document.getElementById('locationList');
+
+        if (this.value === 'location') {
+            searchInput.placeholder = 'Enter location name';
+            searchInput.setAttribute('list', 'locationList');
+            loadLocations();
+        } else {
+            searchInput.placeholder = 'Enter keyword';
+            searchInput.removeAttribute('list');
+            locationList.innerHTML = '';
+        }
+    });
+
+    // get location list
+    async function loadLocations() {
+        try {
+            const response = await apiRequest('{{ url_for("get_locations") }}', 'POST');
+            const locationList = document.getElementById('locationList');
+            locationList.innerHTML = ''; // Clear existing options
+
+            if (response.locations && response.locations.length > 0) {
+                response.locations.forEach(location => {
+                    const option = document.createElement('option');
+                    option.value = location.name;
+                    locationList.appendChild(option);
+                });
+            }
+        } catch (error) {
+            showMessage('Failed to load locations', 'error');
+        }
+    }
+
+    // if location is selected, get location list
+    if (document.getElementById('searchType')?.value === 'location') {
+        loadLocations();
+    }
+
+    // When the user selects an option from the location list, automatically submit the form
+    document.getElementById('searchInput')?.addEventListener('input', function (e) {
+        const searchType = document.getElementById('searchType').value;
+        // Only trigger auto-submit in location search mode
+        if (searchType === 'location') {
+            // Check if the user has selected a value from the datalist
+            const datalistOptions = document.getElementById('locationList').options;
+            const enteredValue = e.target.value;
+
+            for (let i = 0; i < datalistOptions.length; i++) {
+                if (datalistOptions[i].value === enteredValue) {
+                    // The user has selected a valid address, submit the form
+                    this.form.submit();
+                    break;
+                }
+            }
+        }
+    });
+</script>
+
+{% endblock %}
+
+{% block user_content %}
+{% include "components/journey_submit_modal.html" %}
+<section class="container pt-5 col-md-11 mt-5">
+    <div class="container py-5">
+        {% if events %}
+        <div class="position-relative">
+            <div class="position-absolute top-0 bottom-0 start-0 ms-4 border-start border-2 border-secondary-subtle">
+            </div>
+            {% for event in events %}
+            <div class="position-relative mb-2" data-event-id="{{ event.id }}">
+                <div class="row">
+                    <div class="col-12">
+                        <div class="card border-0 shadow-sm rounded-4">
+                            <div class="card-body position-relative">
+                                <div class="row g-0 p-2">
+                                    <div class="d-flex flex-column flex-md-row">
+                                        <!-- event details -->
+                                        <div class="flex-grow-1 d-flex flex-column position-relative">
+                                            <div class="d-flex align-items-center mb-2">
+                                                {% with profile_image=event.profile_image, first_name=event.first_name, show_avatar_modal=True, size=40, user_id=event.user_id %}
+                                                    {% include 'components/avatar_lg.html' %}
+                                                {% endwith %}
+                                                <div class="ms-2 fs-4">
+                                                    <a href="/profile/{{ event.user_id }}" class="text-decoration-none text-dark">
+                                                        {{ event.first_name }} {{ event.last_name }}
+                                                    </a>
+                                                </div>
+                                            </div>
+                                            <div class="pe-5">
+                                                <strong class="mb-2 fs-4">{{ event.title }}</strong>
+                                                <span>&nbsp; {{ event.created_at.strftime('%d/%m/%Y %H:%M') }}</span>
+                                            </div>
+                                            <div class="text-muted small mb-2">
+                                                <i class="bi bi-journal-text me-1"></i>
+                                                <span>Journey:</span>
+                                                <a href="/journey/detail/{{ event.journey_id }}?tab=public" class="text-decoration-none text-muted ms-1">
+                                                    {{ event.journey_title }}
+                                                </a>
+                                            </div>
+                                            <div class="text-muted small">
+                                                <i class="bi bi-calendar-event me-1"></i>
+                                                <span>Start:</span>
+                                                <span class="ms-1">{{ event.start_datetime.strftime('%d/%m/%Y %H:%M') }}</span>
+                                            </div>
+                                            {% if event.end_datetime.strftime('%d/%m/%Y %H:%M') != '31/12/2999 23:59' %}
+                                            <div class="text-muted small">
+                                                <i class="bi bi-calendar-check me-1"></i>
+                                                <span>End:</span>
+                                                <span class="ms-1">{{ event.end_datetime.strftime('%d/%m/%Y %H:%M') }}</span>
+                                            </div>
+                                            {% endif %}
+                                            <p class="mb-3 flex-grow-1" style="white-space: pre-wrap;">{{ event.description }}</p>
+
+                                            <!-- event photo -->
+                                            {% if event.photo_urls %}
+                                                {% set photo_urls = event.photo_urls.split(',') if event.photo_urls else [] %}
+                                                <div class="row g-2">
+                                                    {% for photo_url in photo_urls %}
+                                                        <div class="col-6 col-sm-4 col-lg-3">
+                                                            <div class="ratio ratio-1x1">
+                                                                <img src="{{ url_for('static', filename='file/uploads/' + photo_url|trim ) }}"
+                                                                     alt="event photo"
+                                                                     class="w-100 h-100 rounded-3 object-fit-cover image-preview-trigger"
+                                                                     data-img-src="{{ url_for('static', filename='file/uploads/' + photo_url|trim ) }}">
+                                                            </div>
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                            {% endif %}
+                                            <div class="d-flex justify-content-between align-items-center mt-2">
+                                                <div class="text-muted small">
+                                                    <i class="bi bi-geo-alt me-2"></i>{{ event.location_name }}
+                                                </div>
+                                                <!-- Like and comment buttons, bottom right -->
+                                                <div class="d-flex gap-3">
+                                                    <button class="btn btn-link text-decoration-none p-0"
+                                                        onclick="toggleLike('{{ event.id }}')">
+                                                        <i class="bi {% if event.user_liked %}bi-heart-fill text-danger{% else %}bi-heart text-muted{% endif %}"
+                                                            id="like-icon-{{ event.id }}"></i>
+                                                        <span class="ms-1 text-muted"
+                                                            id="like-count-{{ event.id }}">{{ event.like_count }}</span>
+                                                    </button>
+                                                    <button class="btn btn-link text-decoration-none p-0"
+                                                        onclick="toggleComments('{{ event.id }}')">
+                                                        <i class="bi bi-chat text-muted"></i>
+                                                        <span class="ms-1 text-muted"
+                                                            id="comment-count-{{ event.id }}">{{ event.comment_count }}</span>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <!-- Comment input box and comment list, hidden by default -->
+                                            <div id="comment-box-{{ event.id }}" style="display: none;">
+                                                <div class="input-group my-3">
+                                                    <input type="text"
+                                                        class="form-control rounded-start-pill"
+                                                        id="comment-input-{{ event.id }}"
+                                                        placeholder="Write your comment...">
+                                                    <button class="btn btn-dark rounded-end-pill"
+                                                        type="button"
+                                                        onclick="submitComment('{{ event.id }}')">Post
+                                                    </button>
+                                                </div>
+                                                <div class="comments-list"
+                                                    id="comments-list-{{ event.id }}">
+                                                    <!-- Comments loaded dynamically via JS -->
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- pagination -->
+        <div id="pagination-container" class="d-flex justify-content-center mt-2 py-2" data-action="/departure_board">
+            {% include 'components/pagination.html' %}
+        </div>
+        {% else %}
+        <div class="text-center text-muted my-5">
+            <i class="bi bi-calendar-x fs-1"></i>
+            <p class="mt-3">No events found.</p>
+            {% if tab == 'journey' %}
+            <p class="mt-3">Follow some journeys to see their events here.</p>
+            {% elif tab == 'user' %}
+            <p class="mt-3">Follow some users to see their events here.</p>
+            {% elif tab == 'location' %}
+            <p class="mt-3">Follow some locations to see their events here.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</section>
+
+<!-- image modal -->
+<div class="modal fade" id="imagePreviewModal" tabindex="-1" aria-labelledby="imagePreviewModalLabel"
+    aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-lg">
+        <div class="modal-content bg-transparent border-0">
+            <div class="position-relative">
+                <img id="previewModalImage" src="" alt="Large Preview" class="w-100 rounded-3">
+                <button type="button" class="btn-close position-absolute top-0 end-0 m-3 bg-white rounded-circle p-2"
+                    data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% include "components/report_modal.html" %}
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Get all previewable images
+        const previewImages = document.querySelectorAll('.image-preview-trigger');
+        const previewModal = new bootstrap.Modal(document.getElementById('imagePreviewModal'));
+        const modalImage = document.getElementById('previewModalImage');
+
+        // Add click event for each image
+        previewImages.forEach(image => {
+            image.addEventListener('click', function () {
+                const imgSrc = this.getAttribute('data-img-src');
+                modalImage.src = imgSrc;
+                previewModal.show();
+            });
+        });
+
+        // Initialize like status for each event
+        document.querySelectorAll('[data-event-id]').forEach(eventElement => {
+            const eventId = eventElement.getAttribute('data-event-id');
+            updateLikeCount(eventId);
+        });
+    });
+
+    // Like functionality
+    function toggleLike(eventId) {
+        apiRequest('/event/like', 'POST', {
+                event_id: eventId
+        })
+        .then(data => {
+            if (data.success) {
+                updateLikeUI(eventId, data.action === 'liked');
+                updateLikeCount(eventId);
+            }
+        });
+    }
+
+    function updateLikeUI(eventId, isLiked) {
+        const icon = document.getElementById(`like-icon-${eventId}`);
+        const count = document.getElementById(`like-count-${eventId}`);
+        if (isLiked) {
+            icon.classList.remove('bi-heart', 'text-muted');
+            icon.classList.add('bi-heart-fill', 'text-danger');
+        } else {
+            icon.classList.remove('bi-heart-fill', 'text-danger');
+            icon.classList.add('bi-heart', 'text-muted');
+        }
+        if (count) {
+            count.classList.add('text-muted'); // Always gray
+            count.classList.remove('text-danger');
+        }
+    }
+
+    function updateLikeCount(eventId) {
+        apiRequest(`/event/likes?event_id=${eventId}`)
+            .then(data => {
+                if (data.success) {
+                    document.getElementById(`like-count-${eventId}`).textContent = data.like_count;
+                }
+            });
+    }
+
+    // Comment functionality
+    function toggleComments(eventId) {
+        const commentBox = document.getElementById(`comment-box-${eventId}`);
+        if (commentBox.style.display === 'none' || commentBox.style.display === '') {
+            commentBox.style.display = 'block';
+            loadComments(eventId);
+        } else {
+            commentBox.style.display = 'none';
+        }
+    }
+
+    function loadComments(eventId) {
+        apiRequest(`/comment/list?event_id=${eventId}&sort_by=newest`)
+            .then(data => {
+                if (data.success) {
+                    const commentsList = document.getElementById(`comments-list-${eventId}`);
+                    if (!commentsList) {
+                        console.error(`Comments list container not found for event ${eventId}`);
+                        return;
+                    }
+                    commentsList.innerHTML = '';
+
+                    data.comments.forEach(comment => {
+                        const commentHtml = `
+                            <div class="d-flex gap-2 mb-3" id="comment-${comment.id}">
+                                ${
+                                    comment.profile_image
+                                        ? `<a href="/profile/${comment.user_id}" title="View profile">
+                                              <img src="/static/file/uploads/${comment.profile_image}" alt="${comment.username}" 
+                                                   class="rounded-circle" style="width: 32px; height: 32px; object-fit: cover;">
+                                           </a>`
+                                        : `<div class="rounded-circle bg-secondary d-flex align-items-center justify-content-center"
+                                                 style="width: 32px; height: 32px;">
+                                               <a href="/profile/${comment.user_id}" class="text-decoration-none text-white">
+                                                 ${
+                                                   comment.username
+                                                     ? `<span class="fw-bold">${comment.username[0].toUpperCase()}</span>`
+                                                     : `<i class="bi bi-person" style="font-size: 16px;"></i>`
+                                                 }
+                                               </a>
+                                           </div>`
+                                }
+                                <div class="flex-grow-1">
+                                    <div class="d-flex justify-content-between align-items-center">
+                                        <span class="fw-bold small">${comment.username}</span>
+                                        <small class="text-muted">${formatDate(comment.created_at)}</small>
+                                    </div>
+                                    <p class="mb-0 small">${comment.content}</p>
+                                    <div class="d-flex gap-3 mt-2">
+                                        <button class="btn btn-link text-decoration-none p-0" 
+                                                onclick="toggleCommentReaction('${comment.id}', 'like')">
+                                            <i class="bi ${comment.user_reaction === 'like' ? 'bi-hand-thumbs-up-fill text-primary' : 'bi-hand-thumbs-up text-muted'}"
+                                               id="like-icon-${comment.id}"></i>
+                                            <span class="ms-1 text-muted" id="like-count-${comment.id}">${comment.like_count || 0}</span>
+                                        </button>
+                                        <button class="btn btn-link text-decoration-none p-0"
+                                                onclick="toggleCommentReaction('${comment.id}', 'dislike')">
+                                            <i class="bi ${comment.user_reaction === 'dislike' ? 'bi-hand-thumbs-down-fill text-danger' : 'bi-hand-thumbs-down text-muted'}"
+                                               id="dislike-icon-${comment.id}"></i>
+                                            <span class="ms-1 text-muted" id="dislike-count-${comment.id}">${comment.dislike_count || 0}</span>
+                                        </button>
+                                        <button class="btn btn-link text-decoration-none p-0"
+                                                onclick="showReportModal('${comment.id}')">
+                                            <i class="bi bi-flag text-muted"></i>
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        `;
+                        commentsList.innerHTML += commentHtml;
+                    });
+
+                    document.getElementById(`comment-count-${eventId}`).textContent = data.comments.length;
+                }
+            })
+            .catch(error => {
+                console.error('Error loading comments:', error);
+            });
+    }
+
+    function toggleCommentReaction(commentId, reactionType) {
+        apiRequest('/comment/react', 'POST',  {
+                comment_id: commentId,
+                reaction_type: reactionType
+        })
+        .then(data => {
+            if (data.success) {
+                console.log(`Reaction ${reactionType} ${data.action} for comment ${commentId}`);
+                updateCommentReactionUI(commentId, data.action, reactionType);
+                updateCommentReactionCounts(commentId);
+            }
+        })
+        .catch(error => {
+            console.error('Error toggling reaction:', error);
+        });
+    }
+
+    function updateCommentReactionUI(commentId, action, reactionType) {
+        console.log(`Updating UI for comment ${commentId}, action: ${action}, type: ${reactionType}`);
+        const likeIcon = document.getElementById(`like-icon-${commentId}`);
+        const dislikeIcon = document.getElementById(`dislike-icon-${commentId}`);
+        
+        if (!likeIcon || !dislikeIcon) {
+            console.error(`Reaction icons not found for comment ${commentId}`);
+            return;
+        }
+        
+        // Reset all icon states
+        likeIcon.classList.remove('bi-hand-thumbs-up-fill', 'text-primary');
+        likeIcon.classList.add('bi-hand-thumbs-up', 'text-muted');
+        dislikeIcon.classList.remove('bi-hand-thumbs-down-fill', 'text-danger');
+        dislikeIcon.classList.add('bi-hand-thumbs-down', 'text-muted');
+        
+        // Update icon state based on action
+        if (action === 'added') {
+            if (reactionType === 'like') {
+                likeIcon.classList.remove('bi-hand-thumbs-up', 'text-muted');
+                likeIcon.classList.add('bi-hand-thumbs-up-fill', 'text-primary');
+            } else {
+                dislikeIcon.classList.remove('bi-hand-thumbs-down', 'text-muted');
+                dislikeIcon.classList.add('bi-hand-thumbs-down-fill', 'text-danger');
+            }
+        }
+    }
+
+    function updateCommentReactionCounts(commentId) {
+        apiRequest(`/comment/reactions?comment_id=${commentId}`)
+            .then(data => {
+                if (data.success) {
+                    console.log(`Updating counts for comment ${commentId}:`, data.reactions);
+                    const likeCount = document.getElementById(`like-count-${commentId}`);
+                    const dislikeCount = document.getElementById(`dislike-count-${commentId}`);
+                    
+                    if (!likeCount || !dislikeCount) {
+                        console.error(`Count elements not found for comment ${commentId}`);
+                        return;
+                    }
+                    
+                    // deal with null
+                    const likeCountValue = data.reactions.like_count === null ? 0 : data.reactions.like_count;
+                    const dislikeCountValue = data.reactions.dislike_count === null ? 0 : data.reactions.dislike_count;
+                    
+                    likeCount.textContent = likeCountValue;
+                    dislikeCount.textContent = dislikeCountValue;
+
+                    // If the count is 0, reset the icon status
+                    if (likeCountValue === 0) {
+                        const likeIcon = document.getElementById(`like-icon-${commentId}`);
+                        if (likeIcon) {
+                            likeIcon.classList.remove('bi-hand-thumbs-up-fill', 'text-primary');
+                            likeIcon.classList.add('bi-hand-thumbs-up', 'text-muted');
+                        }
+                    }
+                    if (dislikeCountValue === 0) {
+                        const dislikeIcon = document.getElementById(`dislike-icon-${commentId}`);
+                        if (dislikeIcon) {
+                            dislikeIcon.classList.remove('bi-hand-thumbs-down-fill', 'text-danger');
+                            dislikeIcon.classList.add('bi-hand-thumbs-down', 'text-muted');
+                        }
+                    }
+                }
+            })
+            .catch(error => {
+                console.error('Error updating reaction counts:', error);
+            });
+    }
+
+    function submitComment(eventId) {
+        const content = document.getElementById(`comment-input-${eventId}`).value.trim();
+        if (!content) return;
+
+        apiRequest('/comment/submit', 'POST', {
+                event_id: eventId,
+                content: content
+        })
+        .then(data => {
+            if (data.success) {
+                document.getElementById(`comment-input-${eventId}`).value = '';
+                loadComments(eventId);
+            }
+        });
+    }
+
+    function formatDate(dateString) {
+        const date = new Date(dateString);
+        return date.toLocaleString('en-NZ', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit',
+            hour12: false
+        });
+    }
+
+    function showReportModal(commentId) {
+        document.getElementById('reportCommentId').value = commentId;
+        const reportModal = new bootstrap.Modal(document.getElementById('reportModal'));
+        reportModal.show();
+    }
+
+    function submitReport() {
+        const commentId = document.getElementById('reportCommentId').value;
+        const reportType = document.getElementById('reportType').value;
+        const content = document.getElementById('reportContent').value;
+
+        if (!reportType || !content) {
+            showMessage('Please fill in all report information', 'warning');
+            return;
+        }
+
+        apiRequest('/comment/report', 'POST', {
+                comment_id: commentId,
+                report_type: reportType,
+                content: content
+        })
+        .then(data => {
+            if (data.success) {
+                showMessage('Report submitted successfully', 'success');
+                const reportModal = bootstrap.Modal.getInstance(document.getElementById('reportModal'));
+                reportModal.hide();
+                // Clear form
+                document.getElementById('reportForm').reset();
+            } else {
+                showMessage(data.error || 'Failed to submit report', 'danger');
+            }
+        });
+    }
+</script>
+{% endblock %}

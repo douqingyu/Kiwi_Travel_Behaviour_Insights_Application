@@ -1,0 +1,23 @@
+<!-- Hidden Modal -->
+<div class="modal fade" id="journeyHiddenModal{{ journey_id }}" tabindex="-1" aria-labelledby="journeyHiddenModalLabel{{ journey_id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4">
+            <div class="modal-header {% if journey.is_hidden %}bg-success{% else %}bg-warning{% endif %} text-white border-0 rounded-top-4 px-4">
+                <h5 class="modal-title" id="journeyHiddenModalLabel{{ journey_id }}">{% if journey.is_hidden %}Show Journey{% else %}Hide Journey{% endif %}</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body border-0 p-4">
+                <p>Are you sure you want to {% if journey.is_hidden %}show{% else %}hide{% endif %} this journey? This action can be undone.</p>
+            </div>
+            <div class="modal-footer border-0 p-4">
+                <button type="button" class="btn rounded-5 px-3" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('update_journey_hidden') }}" method="post" class="d-inline">
+                    <input type="hidden" name="journey_id" value="{{ journey_id }}">
+                    <input type="hidden" name="is_hidden" value="{{ 0 if journey.is_hidden else 1 }}">
+                    <input type="hidden" name="tab" value="{{ tab }}">
+                    <button type="submit" class="btn {% if journey.is_hidden %}btn-success{% else %}btn-danger{% endif %} rounded-5 px-3">Confirm</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div> 

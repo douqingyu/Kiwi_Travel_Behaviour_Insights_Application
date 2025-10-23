@@ -1,0 +1,21 @@
+{% extends "authbase.html" %}
+
+{% block title %}LCC - Login{% endblock %}
+
+{% block auth_base_button_group_content %}
+    <button id="loginBtn" class="btn btn-dark flex-grow-1 rounded-5 border-0">
+        &nbsp;Login&nbsp;
+    </button>
+    <a id="signupBtn" href="/signup" class="btn bg-white btn-light flex-grow-1 rounded-5 border-0">
+        Sign Up
+    </a>
+{% endblock %}
+{% block auth_base_form_content %}
+    <form action="{{ url_for('login') }}" method="POST" class="needs-validation" novalidate>
+        {% include "components/username_input.html" %}
+        {% include "components/password_input.html" %}
+        <button type="submit" class="btn btn-dark rounded-5 w-100 mt-3" id="submitLoginBtn">
+            Login
+        </button>
+    </form>
+{% endblock %}

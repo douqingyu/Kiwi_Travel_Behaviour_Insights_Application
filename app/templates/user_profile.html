@@ -1,0 +1,505 @@
+{% extends 'userbase.html' %}
+
+{% block title %}{{ first_name }}'s Profile{% endblock %}
+
+{# Set the active page to be highlighted in the navigation bar. #}
+{% set active_page = 'profile' %}
+
+{% block user_head %}
+<div class="container col-md-8 p-2">
+    <div class="row justify-content-center text-center">
+        <div class="col-lg-7">
+            <h4>{{ username }}'s Profile</h4>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block user_content %}
+<section class="container pt-5 col-md-10 mt-5">
+    <div class="pt-5">
+        <div class="rounded-5 shadow-sm bg-white mb-4 mx-3 p-5">
+            <div class="row">
+                <!-- avatar -->
+                <div class="col-lg-4 mb-4 mb-lg-0">
+                    <div class="d-flex justify-content-center">
+                        <div class="position-relative">
+                            {% with profile_image=profile_image, first_name=first_name, show_avatar_modal=True,
+                            user_id=user.id, size=256 %}
+                            {% include 'components/avatar_lg.html' %}
+                            {% endwith %}
+                            {% if is_own_profile %}
+                            <div class="position-absolute bottom-0 end-0 translate-middle-y me-2 d-flex gap-2">
+                                <form action="{{ url_for('upload_avatar') }}" method="post"
+                                      enctype="multipart/form-data"
+                                      id="avatar-upload-form">
+                                    <label for="file-upload"
+                                           class="btn btn-light btn-sm rounded-circle shadow-sm">
+                                        <i class="bi bi-pencil-square"></i>
+                                    </label>
+                                    <input id="file-upload" type="file" name="file" class="form-control d-none"
+                                           required>
+                                </form>
+                                {% if profile_image %}
+                                <button class="btn btn-light btn-sm rounded-circle shadow-sm" type="button"
+                                        data-bs-toggle="modal" data-bs-target="#avatarDeleteModal">
+                                    <i class="bi bi-trash text-danger"></i>
+                                </button>
+                                {% endif %}
+                            </div>
+                            {% include 'components/avatar_delete_modal.html' %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+
+                <!-- user profile -->
+                <div class="col-lg-8">
+                    {% if is_own_profile %}
+                    <div class="mb-4 p-3 rounded-4 bg-light">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <h6 class="mb-1">Profile Visibility</h6>
+                                <p class="text-muted small mb-0">Control whether your profile appears in the public
+                                    directory</p>
+                            </div>
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" id="visibilityToggle"
+                                       {% if user.is_public_profile %}checked{% endif %}>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- view mode -->
+                    <div id="view-mode">
+                        <div class="d-flex flex-column">
+                            {% if not is_own_profile and not user.is_public_profile %}
+                            <div class="p-4 rounded-4 bg-light">
+                                <div class="text-center">
+                                    <i class="bi bi-eye-slash fs-1 text-muted mb-3"></i>
+                                    <h5 class="mb-2">Profile Hidden</h5>
+                                    <p class="text-muted mb-0">This user has chosen to keep their profile private. You
+                                        can still send them a message.</p>
+                                </div>
+                            </div>
+                            {% else %}
+                            <div class="row g-3">
+                                <div class="col-md-6">
+                                    <div class="p-3 rounded-4 bg-light h-100">
+                                        <p class="text-muted mb-1 small text-uppercase">Username</p>
+                                        <p id="username-display" class="h5 mb-0 fw-semibold">{{ username }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 rounded-4 bg-light h-100">
+                                        <p class="text-muted mb-1 small text-uppercase">Email</p>
+                                        <p id="email-display" class="h5 mb-0 fw-semibold">{{ email }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 rounded-4 bg-light h-100">
+                                        <p class="text-muted mb-1 small text-uppercase">First Name</p>
+                                        <p id="first-name-display" class="h5 mb-0 fw-semibold">{{ first_name }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-md-6">
+                                    <div class="p-3 rounded-4 bg-light h-100">
+                                        <p class="text-muted mb-1 small text-uppercase">Last Name</p>
+                                        <p id="last-name-display" class="h5 mb-0 fw-semibold">{{ last_name }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="p-3 rounded-4 bg-light">
+                                        <p class="text-muted mb-1 small text-uppercase">Location</p>
+                                        <p id="location-display" class="h5 mb-0 fw-semibold">{{ location_name }}</p>
+                                    </div>
+                                </div>
+                                <div class="col-12">
+                                    <div class="p-3 rounded-4 bg-light">
+                                        <p class="text-muted mb-1 small text-uppercase">Description</p>
+                                        <p id="description-display"
+                                           class="h5 mb-0 fw-semibold">{{ description if description else '' }}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                        <!-- edit mode -->
+                        {% if is_own_profile %}
+                        <form action="{{ url_for('save_profile') }}" method="post" id="profile-form"
+                              class="needs-validation d-none"
+                              novalidate>
+                            <div class="d-flex flex-column">
+                                <div class="row g-3">
+                                    <div class="col-md-6">
+                                        <div class="p-3 rounded-4 bg-light h-100">
+                                            <label for="username"
+                                                   class="text-muted mb-1 small text-uppercase">Username</label>
+                                            {% include "components/username_input.html" %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="p-3 rounded-4 bg-light h-100">
+                                            <label for="email"
+                                                   class="text-muted mb-1 small text-uppercase">Email</label>
+                                            {% include "components/email_input.html" %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="p-3 rounded-4 bg-light h-100">
+                                            <label for="first_name" class="text-muted mb-1 small text-uppercase">First
+                                                Name</label>
+                                            {% include "components/first_name_input.html" %}
+                                        </div>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <div class="p-3 rounded-4 bg-light h-100">
+                                            <label for="last_name" class="text-muted mb-1 small text-uppercase">Last
+                                                Name</label>
+                                            {% include "components/last_name_input.html" %}
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="p-3 rounded-4 bg-light">
+                                            <label for="locationSelect" class="text-muted mb-1 small text-uppercase">Location</label>
+                                            {% include 'components/location_select_input.html' %}
+                                        </div>
+                                    </div>
+                                    <div class="col-12">
+                                        <div class="p-3 rounded-4 bg-light">
+                                            <label for="description" class="text-muted mb-1 small text-uppercase">Description</label>
+                                            {% include "components/description_input.html" %}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </form>
+                        {% endif %}
+
+                        {% if is_own_profile %}
+                        <div class="text-center mt-4">
+                            <button id="edit-profile-btn" class="btn btn-dark rounded-5 px-4 py-2">Edit Profile
+                            </button>
+                            <button id="cancel-btn" class="btn d-none rounded-5 px-4 py-2">Cancel</button>
+                            <button id="save-btn" form="profile-form" class="btn btn-dark d-none rounded-5 px-4 py-2"
+                                    type="submit">Save
+                            </button>
+                        </div>
+                        {% else %}
+                        <div class="p-3 d-flex gap-2">
+                            <button type="button" 
+                                    class="btn btn-primary shadow-sm rounded-5"
+                                    data-bs-toggle="modal" 
+                                    data-bs-target="#messageModal"
+                                    data-user-id="{{ user.id }}"
+                                    data-username="{{ user.username }}">
+                                <i class="bi bi-chat-dots me-2"></i>Send Message
+                            </button>
+
+                            {% if session.get('user_id') and session.get('user_id') != user.id %}
+                            <button class="btn {% if is_following %}btn-outline-danger{% else %}btn-dark{% endif %} rounded-pill px-3 follow-btn"
+                                    data-user-id="{{ user.id }}"
+                                    data-is-following="{{ is_following|default(false)|string|lower }}"
+                                    onclick="toggleFollow(this)">
+                                {% if is_following %}Following{% else %}Follow{% endif %}
+                            </button>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            <!-- 新增：Event 活动流卡片 -->
+            <div class="rounded-5 shadow-sm bg-white mb-4 mx-3 p-5">
+                <h5 class="mb-4">Recent Events</h5>
+                <div id="eventFeed"></div>
+                <div id="visitedPlaces" class="mt-4"></div>
+                <button id="loadMoreEventsBtn" class="btn btn-outline-primary w-100 mt-3 d-none">Load More</button>
+            </div>
+        </div>
+    </section>
+
+    <!-- Message Modal -->
+    <div class="modal fade" id="messageModal" tabindex="-1" aria-labelledby="messageModalLabel" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content rounded-4 border-0">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="messageModalLabel">Send Message to <span id="messageToUsername"></span></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="messageForm">
+                        <div class="mb-3">
+                            <textarea class="form-control border-0" id="messageContent" rows="4" placeholder="Type your message here..."></textarea>
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn" data-bs-dismiss="modal">Close</button>
+                    <button type="button" class="btn btn-primary rounded-5" id="sendMessageBtn">Send Message</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if is_own_profile %}
+    <script>
+        // errors from the server
+        const errors = {
+            email: {{ email_error|default(false)|tojson }},
+            username: {{ username_error|default(false)|tojson }},
+            firstName: {{ first_name_error|default(false)|tojson }},
+            lastName: {{ last_name_error|default(false)|tojson }},
+            location: {{ location_error|default(false)|tojson }},
+            description: {{ description_error|default(false)|tojson }}
+        };
+
+        // Auto upload avatar
+        document.getElementById('file-upload').addEventListener('change', function () {
+            document.getElementById('avatar-upload-form').submit();
+        });
+
+        // Check for errors and switch to edit mode if any are found
+        function checkForErrors() {
+            const hasErrors = Object.values(errors).some(error => error);
+            
+            if (hasErrors) {
+                document.getElementById('view-mode').classList.add('d-none');
+                document.getElementById('profile-form').classList.remove('d-none');
+                document.getElementById('edit-profile-btn').classList.add('d-none');
+                document.getElementById('cancel-btn').classList.remove('d-none');
+                document.getElementById('save-btn').classList.remove('d-none');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            checkForErrors();
+        }, {once: true});
+
+        document.getElementById('edit-profile-btn').addEventListener('click', function (event) {
+            event.preventDefault();
+            document.getElementById('view-mode').classList.add('d-none');
+            document.getElementById('profile-form').classList.remove('d-none');
+            document.getElementById('edit-profile-btn').classList.add('d-none');
+            document.getElementById('cancel-btn').classList.remove('d-none');
+            document.getElementById('save-btn').classList.remove('d-none');
+        });
+
+        document.getElementById('cancel-btn').addEventListener('click', function () {
+            document.getElementById('view-mode').classList.remove('d-none');
+            document.getElementById('profile-form').classList.add('d-none');
+            document.getElementById('edit-profile-btn').classList.remove('d-none');
+            document.getElementById('cancel-btn').classList.add('d-none');
+            document.getElementById('save-btn').classList.add('d-none');
+        });
+
+        document.getElementById('visibilityToggle').addEventListener('change', function() {
+            const isPublic = this.checked;
+            
+            apiRequest('/profile/visibility', 'POST', {
+                is_public: isPublic
+            })
+            .then(data => {
+                if (data.success) {
+                    showMessage(data.message, 'success');
+                } else {
+                    this.checked = !isPublic;
+                    showMessage('Failed to update visibility settings. Please try again.', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                this.checked = !isPublic;
+                showMessage('Failed to update visibility settings. Please try again.', 'error');
+            });
+        });
+    </script>
+    {% endif %}
+
+    <!-- Message Modal Script -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const messageModal = document.getElementById('messageModal');
+            const messageToUsername = document.getElementById('messageToUsername');
+            const messageContent = document.getElementById('messageContent');
+            const sendMessageBtn = document.getElementById('sendMessageBtn');
+            let currentReceiverId = null;
+
+            messageModal.addEventListener('show.bs.modal', function (event) {
+                const button = event.relatedTarget;
+                const userId = button.getAttribute('data-user-id');
+                const username = button.getAttribute('data-username');
+                
+                currentReceiverId = userId;
+                messageToUsername.textContent = username;
+                messageContent.value = '';
+            });
+
+            // send message
+            sendMessageBtn.addEventListener('click', function() {
+                const content = messageContent.value.trim();
+                if (!content) {
+                    showMessage('Please enter a message', 'error');
+                    return;
+                }
+
+                apiRequest('/messages/send', 'POST', {
+                        receiver_id: currentReceiverId,
+                        content: content
+                })
+                .then(data => {
+                    if (data.error) {
+                        showMessage(data.error, 'error');
+                        return;
+                    }
+
+                    messageContent.value = '';
+                    const modal = bootstrap.Modal.getInstance(messageModal);
+                    modal.hide();
+
+                    // show sucessful message
+                    showMessage('Message sent successfully!', 'success');
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    showMessage('Failed to send message. Please try again.', 'error');
+                });
+        });
+    });
+</script>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        let currentPage = 1;
+        let totalPages = 1;
+        const eventFeed = document.getElementById('eventFeed');
+        const visitedPlaces = document.getElementById('visitedPlaces');
+        const loadMoreBtn = document.getElementById('loadMoreEventsBtn');
+        const userId = {{ user.id }};
+
+        function renderEvent(event) {
+            console.log('Debug - Rendering event:', event);
+            return `
+            <div class="activity-item mb-3 p-3 rounded-4 bg-light">
+                <div class="d-flex flex-column flex-md-row align-items-md-center justify-content-between">
+                    <div>
+                        <div class="fw-bold fs-5 mb-1">${event.event_title || 'Untitled Event'}</div>
+                        <div class="text-muted small mb-1">
+                            <i class="bi bi-calendar-event me-1"></i>${event.event_time ? new Date(event.event_time).toLocaleString() : 'No date'}
+                            &nbsp;|&nbsp;<i class="bi bi-geo-alt me-1"></i>${event.location_name || 'No location'}
+                        </div>
+                        <div class="text-muted small mb-1">
+                            <i class="bi bi-journal-text me-1"></i>Journey: ${event.journey_title || 'No journey'}
+                        </div>
+                        <div class="mb-2">${event.event_description ? event.event_description.substring(0, 120) : 'No description'}</div>
+                    </div>
+                    <div class="d-flex flex-row align-items-center gap-3 mt-2 mt-md-0">
+                        <span class="text-danger"><i class="bi bi-heart${event.user_liked ? '-fill' : ''}"></i> ${event.like_count || 0}</span>
+                        <span class="text-primary"><i class="bi bi-chat-dots"></i> ${event.comment_count || 0}</span>
+                        <a href="/journey/detail/${event.journey_id}" class="btn btn-sm btn-outline-secondary ms-2">View</a>
+                    </div>
+                </div>
+            </div>`;
+        }
+
+        function renderVisitedPlaces(places) {
+            console.log('Debug - Rendering visited places:', places);
+            if (!places || !places.length) {
+                console.log('Debug - No visited places to render');
+                return '';
+            }
+            let html = '<h6>Places Visited</h6><div class="row g-2">';
+            places.forEach(place => {
+                html += `<div class="col-auto"><span class="badge bg-light text-dark">${place.name} (${place.visit_count})</span></div>`;
+            });
+            html += '</div>';
+            return html;
+        }
+
+        function loadEvents(page = 1) {
+            console.log('Debug - Loading events for page:', page);
+            apiRequest(`/profile/events?user_id=${userId}&page=${page}`, 'GET')
+                .then(data => {
+                    console.log('Debug - Received data:', data);
+                    if (data.success) {
+                        totalPages = data.total_pages;
+                        if (page === 1) {
+                            eventFeed.innerHTML = '';
+                            visitedPlaces.innerHTML = renderVisitedPlaces(data.visited_places);
+                        }
+                        if (data.events && data.events.length > 0) {
+                            data.events.forEach(ev => {
+                                eventFeed.insertAdjacentHTML('beforeend', renderEvent(ev));
+                            });
+                        } else {
+                            console.log('Debug - No events to display');
+                            eventFeed.innerHTML = '<div class="text-center text-muted">No events found</div>';
+                        }
+                        if (page < totalPages) {
+                            loadMoreBtn.classList.remove('d-none');
+                        } else {
+                            loadMoreBtn.classList.add('d-none');
+                        }
+                    } else {
+                        console.error('Debug - Error loading events:', data);
+                        eventFeed.innerHTML = '<div class="text-center text-danger">Error loading events</div>';
+                    }
+                })
+                .catch(error => {
+                    console.error('Debug - Fetch error:', error);
+                    eventFeed.innerHTML = '<div class="text-center text-danger">Error loading events</div>';
+                });
+        }
+
+        loadMoreBtn.addEventListener('click', function () {
+            if (currentPage < totalPages) {
+                currentPage++;
+                loadEvents(currentPage);
+            }
+        });
+
+        loadEvents(1);
+    });
+</script>
+
+<script>
+    function toggleFollow(button) {
+        const userId = button.dataset.userId;
+        const isFollowing = button.dataset.isFollowing === 'true';
+
+        const formData = new FormData();
+        formData.append('user_id', userId);
+        formData.append('is_following', isFollowing);
+
+        fetch('/user/follow', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                button.dataset.isFollowing = (!isFollowing).toString();
+                if (!isFollowing) {
+                    button.classList.remove('btn-dark');
+                    button.classList.add('btn-outline-danger');
+                    button.textContent = 'Following';
+                } else {
+                    button.classList.remove('btn-outline-danger');
+                    button.classList.add('btn-dark');
+                    button.textContent = 'Follow';
+                }
+            } else {
+                showMessage(data.message || 'failed', 'error');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            showMessage('failed', 'error');
+        });
+    }
+</script>
+{% endblock %}

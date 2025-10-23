@@ -1,0 +1,24 @@
+<div class="modal fade" id="journeyPublicModal{{ journey_id }}" tabindex="-1" aria-labelledby="journeyPublicModalLabel{{ journey_id }}"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4">
+            <div class="modal-header bg-black text-white border-0 rounded-top-4 px-4">
+                <h5 class="modal-title" id="journeyPublicModalLabel{{ journey_id }}">Change Journey Visibility</h5>
+            </div>
+            <div class="modal-body border-0 p-4">
+                <p>Are you sure you want to make this journey {% if journey.is_public %}private{% else %}public{% endif %}?</p>
+            </div>
+            <div class="modal-footer border-0 p-4">
+                <button type="button" class="btn rounded-5 px-3" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('update_journey_public') }}" method="POST" class="d-inline">
+                    <input type="hidden" name="journey_id" value="{{ journey.id }}">
+                    <input type="hidden" name="is_public" value="{{ 0 if journey.is_public else 1 }}">
+                    <input type="hidden" name="tab" value="{{ tab }}">
+                    <button type="submit" class="btn btn-dark rounded-5 px-3">
+                        {% if journey.is_public %}Set as Private{% else %}Set as Public{% endif %}
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

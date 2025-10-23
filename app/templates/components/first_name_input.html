@@ -1,0 +1,16 @@
+{#first name input component#}
+<div class="mb-3">
+    <input type="text"
+           class="form-control rounded-3 border-0 bg-body-secondary{% if first_name_error %} is-invalid{% endif %}"
+           pattern="^[A-Za-zĀ-Ūā-ū]{2,50}$"
+           id="first-name-input" name="first_name"
+           placeholder="{% if required %}first name{% else %}first name (Optional){% endif %}" 
+           value="{{ first_name }}" {% if required %}required{% endif %}>
+    <div class="invalid-feedback">
+        {% if first_name_error %}
+            {{ first_name_error }}
+        {% else %}
+            Name can contain only letters (including Māori macrons), 2 to 50 characters long
+        {% endif %}
+    </div>
+</div>

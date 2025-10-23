@@ -1,0 +1,102 @@
+{% if session.get('user_id') == journey.user_id or session.get('role') in ['editor', 'admin', 'support_techs'] %}
+    <div class="col-auto" onclick="event.stopPropagation();">
+        {% if not journey.is_public %}
+            <i class="bi bi-lock-fill text-muted fs-6 me-2" title="This journey is private"></i>
+        {% elif journey.is_public == 'published' %}
+            <i class="bi bi-globe text-muted fs-6 me-2" title="This journey is published"></i>
+        {% endif %}
+        {% if journey.is_hidden %}
+            <i class="bi bi-eye-slash text-muted me-2" title="This journey is hidden"></i>
+        {% endif %}
+        {% if journey.no_edit %}
+            <i class="bi bi-pencil-slash text-muted me-2" title="This journey cannot be edited"></i>
+        {% endif %}
+        <div class="dropdown d-inline">
+            <button class="btn btn-link text-dark p-0" type="button"
+                    data-bs-toggle="dropdown" aria-expanded="false">
+                <i class="bi bi-three-dots fs-6"></i>
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end rounded-4">
+                {% if not journey.no_edit or session.get('user_id') == journey.user_id %}
+                <li>
+                    <button class="dropdown-item" data-bs-toggle="modal"
+                            data-bs-target="#journeyEditModal{{ journey.id }}">
+                        <i class="bi bi-pencil-square me-2"></i>Edit
+                    </button>
+                </li>
+                {% endif %}
+                <li>
+                    <button class="dropdown-item" data-bs-toggle="modal"
+                            data-bs-target="#journeyEditHistoryModal{{ journey.id }}">
+                        <i class="bi bi-clock-history me-2"></i>Edit History
+                    </button>
+                </li>
+                {% if session.get('can_share') and session.get('user_id') == journey.user_id %}
+                    <li>
+                        <button class="dropdown-item" data-bs-toggle="modal"
+                                data-bs-target="#journeyPublicModal{{ journey.id }}">
+                            <i class="bi {% if journey.is_public %}bi-lock{% else %}bi-globe{% endif %} me-2"></i>
+                            {% if journey.is_public %}Set as Private{% else %}
+                                Set as Public{% endif %}
+                        </button>
+                    </li>
+                    {% if session.get('role') in ['admin', 'editor', 'support_techs'] or session.get('has_active_subscription') %}
+                        <li>
+                            <button class="dropdown-item" data-bs-toggle="modal"
+                                    data-bs-target="#journeyPublishModal{{ journey.id }}">
+                                <i class="bi bi-globe me-2"></i>
+                                {% if journey.is_published %}Set as Unpublish{% else %}
+                                Set as Publish{% endif %}
+                            </button>
+                        </li>
+                        <li>
+                            <button class="dropdown-item" data-bs-toggle="modal"
+                                    data-bs-target="#journeyNoEditModal{{ journey.id }}">
+                                <i class="bi bi-pencil me-2"></i>
+                                {% if journey.no_edit %}Allow Edit{% else %}No Edit{% endif %}
+                            </button>
+                        </li>
+                    {% endif %}
+                {% endif %}
+                {% if journey.is_public and session.get('role') in ['editor', 'admin', 'support_techs'] %}
+                    <li>
+                        <button class="dropdown-item" data-bs-toggle="modal"
+                                data-bs-target="#journeyHiddenModal{{ journey.id }}">
+                            <i class="bi {% if journey.is_hidden %}bi-eye{% else %}bi-eye-slash{% endif %} me-2"></i>
+                            {% if journey.is_hidden %}Show Journey{% else %}Hide Journey{% endif %}
+                        </button>
+                    </li>
+                {% endif %}
+                {% if journey.is_hidden and session.get('user_id') == journey.user_id %}
+                    <li>
+                        <button class="dropdown-item" data-bs-toggle="modal"
+                                data-bs-target="#journeyAppealModal{{ journey.id }}">
+                            <i class="bi bi-exclamation-circle me-2"></i>Appeal Hidden Status
+                        </button>
+                    </li>
+                {% endif %}
+                <li>
+                    <button class="dropdown-item text-danger"
+                            data-bs-toggle="modal"
+                            data-bs-target="#journeyDeleteModal{{ journey.id }}">
+                        <i class="bi bi-trash me-2"></i>Delete
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
+    {% with journey_id=journey.id %}
+        {% include "components/journey_edit_modal.html" %}
+        {% include "components/journey_delete_modal.html" %}
+        {% include "components/journey_public_modal.html" %}
+        {% include "components/journey_publish_modal.html" %}
+        {% include "components/journey_edit_history_modal.html" %}
+        {% include "components/journey_no_edit_modal.html" %}
+        {% if session.get('role') in ['editor', 'admin', 'support_techs'] %}
+            {% include "components/journey_hidden_modal.html" %}
+        {% endif %}
+        {% if journey.is_hidden and session.get('user_id') == journey.user_id %}
+            {% include "components/journey_appeal_modal.html" %}
+        {% endif %}
+    {% endwith %}
+{% endif %}

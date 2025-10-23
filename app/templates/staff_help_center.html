@@ -1,0 +1,434 @@
+{% extends 'userbase.html' %}
+
+{% block title %}Staff Help Center{% endblock %}
+
+{% block user_head %}
+    <div class="container col-md-8 py-3">
+        <div class="position-relative">
+            <div class="text-center">
+                <strong class="fs-4">Staff Help Center</strong>
+            </div>
+        </div>
+        <div class="d-flex flex-column flex-md-row align-items-center justify-content-center gap-2 p-2 rounded-5 bg-body-secondary">
+            <div class="col-12">
+                <!-- Filter options -->
+                <div class="d-flex flex-wrap align-items-center justify-content-center gap-2 w-100">
+                    <!-- User Type Filter -->
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="mb-0">User Type:</label>
+                        <select class="form-select form-select-sm" id="userTypeFilter">
+                            <option value="all" {% if user_type == 'all' %}selected{% endif %}>All</option>
+                            <option value="premium" {% if user_type == 'premium' %}selected{% endif %}>Premium</option>
+                            <option value="staff" {% if user_type == 'staff' %}selected{% endif %}>Staff</option>
+                            <option value="free" {% if user_type == 'free' %}selected{% endif %}>Free</option>
+                        </select>
+                    </div>
+
+                    <!-- Status Filter -->
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="mb-0">Status:</label>
+                        <select class="form-select form-select-sm" id="statusFilter">
+                            <option value="new" {% if status == 'new' %}selected{% endif %}>New</option>
+                            <option value="open" {% if status == 'open' %}selected{% endif %}>Open</option>
+                            <option value="stalled" {% if status == 'stalled' %}selected{% endif %}>Stalled</option>
+                            <option value="resolved" {% if status == 'resolved' %}selected{% endif %}>Resolved</option>
+                        </select>
+                    </div>
+
+                    <!-- Assigned To Filter -->
+                    <div class="d-flex align-items-center gap-2">
+                        <label class="mb-0">Assigned To:</label>
+                        <select class="form-select form-select-sm" id="assignedToFilter">
+                            <option value="">All</option>
+                            {% for staff in staff_members %}
+                                <option value="{{ staff.id }}" {% if assigned_to|int == staff.id %}selected{% endif %}>
+                                    {{ staff.first_name }} {{ staff.last_name }} ({{ staff.role }})
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endblock %}
+
+{% block user_content %}
+    <section class="container pt-5 col-md-8 mt-5">
+        <!-- Help request list -->
+        <div class="list-group pt-5 mt-5">
+            {% for request in help_requests %}
+                <div class="list-group-item list-group-item-action">
+                    <div class="d-flex w-100 justify-content-between align-items-center">
+                        <div>
+                            <h5 class="mb-1">
+                                {% if request.user_type == 'premium' %}
+                                    <i class="bi bi-star-fill text-warning me-2" title="Premium User"></i>
+                                {% elif request.user_type == 'staff' %}
+                                    <i class="bi bi-shield-fill text-primary me-2" title="Staff"></i>
+                                {% endif %}
+                                {{ request.title }}
+                                <span class="badge {% if request.status == 'new' %}bg-danger{% elif request.status == 'open' %}bg-primary{% elif request.status == 'stalled' %}bg-warning{% else %}bg-success{% endif %} ms-2">
+                                    {{ request.status|title }}
+                                </span>
+                            </h5>
+                            <p class="mb-1 text-muted">
+                                <small>
+                                    Submitted by: {{ request.first_name }} {{ request.last_name }}
+                                    ({{ request.role }})
+                                    {% if request.user_type == 'premium' %}
+                                        <span class="badge bg-warning text-dark ms-2">Premium</span>
+                                    {% endif %}
+                                </small>
+                            </p>
+                            {% if request.assigned_to %}
+                                <p class="mb-1 text-muted">
+                                    <small>
+                                        Assigned to: {{ request.assigned_first_name }} {{ request.assigned_last_name }}
+                                        ({{ request.assigned_role }})
+                                    </small>
+                                </p>
+                            {% endif %}
+                        </div>
+                        <div class="text-end">
+                            <small class="text-muted">{{ request.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                            <br>
+                            <span class="badge bg-secondary">{{ request.reply_count }} Replies</span>
+                        </div>
+                    </div>
+                    <p class="mb-1 mt-2">
+                        {{ request.content[:200] }}{% if request.content|length > 200 %}...{% endif %}
+                    </p>
+                    <div class="mt-2">
+                        <button class="btn btn-sm btn-outline-primary view-request" data-request-id="{{ request.id }}">
+                            View Details
+                        </button>
+                        {% if not request.assigned_to %}
+                            <button class="btn btn-sm btn-success take-on-request" data-request-id="{{ request.id }}">
+                                Take On
+                            </button>
+                        {% elif request.assigned_to == session.user_id %}
+                            <button class="btn btn-sm btn-warning abandon-request" data-request-id="{{ request.id }}">
+                                Abandon
+                            </button>
+                        {% endif %}
+                    </div>
+                </div>
+            {% else %}
+                <div class="text-center py-5">
+                    <p class="text-muted">No help requests found</p>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+            <div id="pagination-container" class="d-flex justify-content-center mt-2 py-2">
+                {% include 'components/pagination.html' %}
+            </div>
+        {% endif %}
+    </section>
+
+    <!-- Request details modal -->
+    <div class="modal fade" id="requestModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="request-content mb-4"></div>
+                    <div class="replies-container"></div>
+                    <form id="replyForm" class="mt-4">
+                        <div class="mb-3">
+                            <textarea class="form-control" name="content" rows="3" required></textarea>
+                        </div>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <button type="submit" class="btn btn-primary">Submit Reply</button>
+                                <button type="button" class="btn btn-outline-primary assign-request" data-bs-toggle="modal" data-bs-target="#assignModal">
+                                    Assign to Staff
+                                </button>
+                            </div>
+                            <div class="btn-group">
+                                <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown">
+                                    Change Status
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item change-status" href="#" data-status="new">New</a></li>
+                                    <li><a class="dropdown-item change-status" href="#" data-status="open">Open</a></li>
+                                    <li><a class="dropdown-item change-status" href="#" data-status="stalled">Stalled</a></li>
+                                    <li><a class="dropdown-item change-status" href="#" data-status="resolved">Resolved</a></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Assign request modal -->
+    <div class="modal fade" id="assignModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Assign Request</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="assignForm">
+                        <div class="mb-3">
+                            <label class="form-label">Select Staff Member</label>
+                            <select class="form-select" name="staff_id" required>
+                                <option value="">Choose...</option>
+                                {% for staff in staff_members %}
+                                    <option value="{{ staff.id }}">
+                                        {{ staff.first_name }} {{ staff.last_name }} ({{ staff.role }})
+                                    </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Assign</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const requestModal = new bootstrap.Modal(document.getElementById('requestModal'));
+            const assignModal = new bootstrap.Modal(document.getElementById('assignModal'));
+            let currentRequestId = null;
+
+            // Filter change handlers
+            document.getElementById('userTypeFilter').addEventListener('change', updateFilters);
+            document.getElementById('statusFilter').addEventListener('change', updateFilters);
+            document.getElementById('assignedToFilter').addEventListener('change', updateFilters);
+
+            function updateFilters() {
+                const userType = document.getElementById('userTypeFilter').value;
+                const status = document.getElementById('statusFilter').value;
+                const assignedTo = document.getElementById('assignedToFilter').value;
+                
+                window.location.href = `/help/staff?user_type=${userType}&status=${status}&assigned_to=${assignedTo}`;
+            }
+
+            // View request details
+            document.querySelectorAll('.view-request').forEach(button => {
+                button.addEventListener('click', async function () {
+                    const requestId = this.dataset.requestId;
+                    currentRequestId = requestId;
+
+                    try {
+                        const response = await fetch(`/help/request/${requestId}`);
+                        const request = await response.json();
+
+                        if (response.ok) {
+                            const modal = document.getElementById('requestModal');
+                            modal.querySelector('.modal-title').textContent = request.title;
+                            modal.querySelector('.request-content').innerHTML = `
+                                <div class="card">
+                                    <div class="card-body">
+                                        <p class="card-text">${request.content}</p>
+                                        <div class="d-flex justify-content-between align-items-center">
+                                            <small class="text-muted">
+                                                Submitted by: ${request.first_name} ${request.last_name}
+                                                (${request.role})
+                                                ${request.user_type === 'premium' ?
+                                    '<span class="badge bg-warning text-dark ms-2">Premium</span>' :
+                                    ''}
+                                            </small>
+                                            <small class="text-muted">
+                                                ${new Date(request.created_at).toLocaleString()}
+                                            </small>
+                                        </div>
+                                    </div>
+                                </div>
+                            `;
+
+                            // Load replies
+                            const repliesContainer = modal.querySelector('.replies-container');
+                            repliesContainer.innerHTML = '<h6 class="mt-4 mb-3">Replies</h6>';
+
+                            if (request.replies && request.replies.length > 0) {
+                                request.replies.forEach(reply => {
+                                    repliesContainer.innerHTML += `
+                                        <div class="card mb-3">
+                                            <div class="card-body">
+                                                <p class="card-text">${reply.content}</p>
+                                                <div class="d-flex justify-content-between align-items-center">
+                                                    <small class="text-muted">
+                                                        ${reply.first_name} ${reply.last_name}
+                                                        (${reply.role})
+                                                    </small>
+                                                    <small class="text-muted">
+                                                        ${new Date(reply.created_at).toLocaleString()}
+                                                    </small>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                });
+                            } else {
+                                repliesContainer.innerHTML += '<p class="text-muted">No replies yet</p>';
+                            }
+
+                            requestModal.show();
+                        } else {
+                            alert('Failed to get request details');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Failed to get request details');
+                    }
+                });
+            });
+
+            // Take on request
+            document.querySelectorAll('.take-on-request').forEach(button => {
+                button.addEventListener('click', async function () {
+                    const requestId = this.dataset.requestId;
+                    try {
+                        const response = await fetch(`/help/request/${requestId}/assign`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: `staff_id={{ session.user_id }}`
+                        });
+
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            const data = await response.json();
+                            alert(data.error || 'Failed to take on request');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Failed to take on request');
+                    }
+                });
+            });
+
+            // Abandon request
+            document.querySelectorAll('.abandon-request').forEach(button => {
+                button.addEventListener('click', async function () {
+                    if (!confirm('Are you sure you want to abandon this request?')) {
+                        return;
+                    }
+
+                    const requestId = this.dataset.requestId;
+                    try {
+                        const response = await fetch(`/help/request/${requestId}/abandon`, {
+                            method: 'POST'
+                        });
+
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            const data = await response.json();
+                            alert(data.error || 'Failed to abandon request');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Failed to abandon request');
+                    }
+                });
+            });
+
+            // Submit reply
+            document.getElementById('replyForm').addEventListener('submit', async function (e) {
+                e.preventDefault();
+
+                if (!currentRequestId) return;
+
+                const content = this.querySelector('[name="content"]').value;
+
+                try {
+                    const response = await fetch(`/help/request/${currentRequestId}/reply`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: `content=${encodeURIComponent(content)}`
+                    });
+
+                    if (response.ok) {
+                        this.reset();
+                        window.location.reload();
+                    } else {
+                        const data = await response.json();
+                        alert(data.error || 'Failed to submit reply');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Failed to submit reply');
+                }
+            });
+
+            // Assign request
+            document.getElementById('assignForm').addEventListener('submit', async function (e) {
+                e.preventDefault();
+
+                if (!currentRequestId) return;
+
+                const staffId = this.querySelector('[name="staff_id"]').value;
+
+                try {
+                    const response = await fetch(`/help/request/${currentRequestId}/assign`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                        },
+                        body: `staff_id=${staffId}`
+                    });
+
+                    if (response.ok) {
+                        assignModal.hide();
+                        window.location.reload();
+                    } else {
+                        const data = await response.json();
+                        alert(data.error || 'Failed to assign request');
+                    }
+                } catch (error) {
+                    console.error('Error:', error);
+                    alert('Failed to assign request');
+                }
+            });
+
+            // Change status
+            document.querySelectorAll('.change-status').forEach(button => {
+                button.addEventListener('click', async function (e) {
+                    e.preventDefault();
+
+                    if (!currentRequestId) return;
+
+                    const status = this.dataset.status;
+
+                    try {
+                        const response = await fetch(`/help/request/${currentRequestId}/status`, {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                            },
+                            body: `status=${status}`
+                        });
+
+                        if (response.ok) {
+                            window.location.reload();
+                        } else {
+                            const data = await response.json();
+                            alert(data.error || 'Failed to update status');
+                        }
+                    } catch (error) {
+                        console.error('Error:', error);
+                        alert('Failed to update status');
+                    }
+                });
+            });
+        });
+    </script>
+{% endblock %} 

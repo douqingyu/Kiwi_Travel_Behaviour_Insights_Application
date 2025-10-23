@@ -1,0 +1,33 @@
+<div class="mb-3">
+    <input type="text" class="form-control rounded-3 border-0 bg-body-secondary" id="{{ location_id|default('locationSelect') }}"
+           pattern=".*[A-Za-z]+.*"
+           list="locationList{{ location_id|default('') }}"
+           placeholder="{% if required %}location{% else %}location (Optional){% endif %}"
+           name="location_name" value="{{ location_name }}" {% if required %}required{% endif %}>
+    <datalist id="locationList{{ location_id|default('') }}"></datalist>
+    <div class="invalid-feedback">Please select a valid location</div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        loadLocations('{{ location_id|default('') }}');
+    });
+
+    async function loadLocations(locationId = '') {
+        try {
+            const response = await apiRequest('{{ url_for("get_locations") }}', 'POST');
+            const locationList = document.getElementById('locationList' + locationId);
+            locationList.innerHTML = ''; // Clear existing options
+
+            if (response.locations && response.locations.length > 0) {
+                response.locations.forEach(location => {
+                    const option = document.createElement('option');
+                    option.value = location.name;
+                    locationList.appendChild(option);
+                });
+            }
+        } catch (error) {
+            showMessage('Failed to load locations', 'error');
+        }
+    }
+</script>

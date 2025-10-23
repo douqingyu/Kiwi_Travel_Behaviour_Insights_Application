@@ -1,0 +1,14 @@
+{# common avatar component #}
+{% if profile_image %}
+    <img src="{{ url_for('static', filename='file/uploads/' + profile_image) }}" alt="Avatar"
+         class="rounded-circle border-dark border-1" width="32" height="32">
+{% else %}
+    <div class="rounded-circle text-black d-flex align-items-center bg-white justify-content-center border border-0"
+         style="width: 32px; height: 32px;">
+        {% if first_name %}
+            <span class="fs-4">{{ first_name[0].upper() }}</span>
+        {% else %}
+            <i class="bi bi-person fs-4"></i>
+        {% endif %}
+    </div>
+{% endif %}

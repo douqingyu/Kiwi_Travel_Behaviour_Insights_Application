@@ -1,0 +1,123 @@
+<div class="modal fade" id="announcementSubmitModal" tabindex="-1" aria-labelledby="announcementSubmitModalLabel"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4">
+            <div class="modal-header bg-black text-white border-0 rounded-top-4 px-4">
+                <h5 class="modal-title" id="announcementSubmitModalLabel">Add New Announcement</h5>
+            </div>
+            <div class="modal-body border-0 p-4">
+                <form id="announcementAddForm">
+                    <div class="mb-3">
+                        <label for="announcementTitle" class="form-label text-secondary">Title <span
+                                class="text-danger">*</span></label>
+                        <input type="text" class="form-control rounded-3 border-0 bg-body-secondary" id="announcementTitle" name="announcementTitle"
+                               maxlength="255" required>
+                        <div class="invalid-feedback">Please enter a title</div>
+                    </div>
+                    <div class="mb-3">
+                        <label for="announcementContent" class="form-label text-secondary">Content <span
+                                class="text-danger">*</span></label>
+                        <textarea class="form-control rounded-3 border-0 bg-body-secondary" id="announcementContent" name="announcementContent"
+                                  rows="3" required></textarea>
+                        <div class="invalid-feedback">Please enter content</div>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer border-0 p-4">
+                <button type="button" class="btn rounded-5 px-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" id="announcementSubmitBtn" class="btn btn-dark rounded-5 px-3" disabled>Submit</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const announcementForm = document.getElementById('announcementAddForm');
+        const submitBtn = document.getElementById('announcementSubmitBtn');
+        const modal = document.getElementById('announcementSubmitModal');
+        let isSubmitting = false;
+
+        // forbid default submission
+        announcementForm.addEventListener('submit', function (e) {
+            e.preventDefault();
+        });
+
+        // Reset form state
+        function resetModalState() {
+            document.getElementById('announcementTitle').value = '';
+            document.getElementById('announcementContent').value = '';
+            submitBtn.disabled = true;
+            isSubmitting = false;
+        }
+
+        // Listen for modal hide event
+        modal.addEventListener('hidden.bs.modal', function () {
+            resetModalState();
+        });
+
+        // Handle form input events
+        function handleFormInput() {
+            submitBtn.disabled = !announcementForm.checkValidity();
+        }
+
+        announcementForm.addEventListener('input', handleFormInput);
+
+        // Handle submit event
+        submitBtn.addEventListener('click', async function (e) {
+            e.preventDefault();
+
+            if (!announcementForm.checkValidity()) {
+                showMessage('Please fill out the form correctly.', 'error');
+                return;
+            }
+
+            if (isSubmitting) {
+                return;
+            }
+
+            try {
+                isSubmitting = true;
+                submitBtn.disabled = true;
+
+                const data = {
+                    title: document.getElementById('announcementTitle').value,
+                    content: document.getElementById('announcementContent').value
+                };
+                await apiRequest('{{ url_for("announcement_submit") }}', 'POST', data);
+                window.location.reload();
+            } catch (error) {
+                isSubmitting = false;
+                submitBtn.disabled = false;
+                showMessage(error.message, 'error');
+            }
+        });
+
+        // Add real-time validation for all required fields
+        const announcementTitle = document.getElementById('announcementTitle');
+        const announcementContent = document.getElementById('announcementContent');
+
+        announcementTitle.addEventListener('input', validateAllFields);
+        announcementContent.addEventListener('input', validateAllFields);
+
+        // Function to validate all fields
+        function validateAllFields() {
+            const requiredFields = announcementForm.querySelectorAll('[required]');
+            let isValid = true;
+
+            requiredFields.forEach(field => {
+                const feedback = field.nextElementSibling;
+                if (field.value.trim() === '') {
+                    field.classList.add('is-invalid');
+                    feedback.style.display = 'block';
+                    isValid = false;
+                } else {
+                    field.classList.remove('is-invalid');
+                    feedback.style.display = 'none';
+                }
+            });
+
+            submitBtn.disabled = !isValid;
+        }
+    });
+</script> 

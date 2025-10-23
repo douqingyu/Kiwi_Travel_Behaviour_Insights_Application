@@ -1,0 +1,191 @@
+{% extends 'userbase.html' %}
+
+{% block title %}Journeys{% endblock %}
+
+{# Set the active page to be highlighted in the navigation bar. #}
+{% set active_page = 'journeys' %}
+
+
+{% block user_head %}
+<div class="container col-md-8 p-2">
+    <form method="post" action="/journeys" class="d-flex flex-column gap-2">
+        <div class="d-flex flex-column flex-md-row align-items-center justify-content-center gap-2 p-2 rounded-5 bg-body-secondary">
+            <!-- Tab buttons -->
+            <div class="d-flex align-items-center justify-content-center gap-2 w-100 w-md-auto">
+                {% set tabs = [('my', 'My'), ('public', 'Public')] %}
+                {% if session.get('role') in ['admin', 'support_techs'] %}
+                {% set tabs = tabs + [('hidden', 'Hidden')] %}
+                {% endif %}
+                {% for value, label in tabs %}
+                <div class="flex-grow-1">
+                    <input type="radio" class="d-none" name="tab" id="{{ value }}Tab" value="{{ value }}" {% if
+                        tab==value %}checked{% endif %}>
+                    <label
+                        class="btn w-100 {% if tab == value %}btn-dark{% else %}bg-white btn-light{% endif %} rounded-5 border-0"
+                        for="{{ value }}Tab">{{ label }}</label>
+                </div>
+                {% endfor %}
+
+                {% if tab == 'public' %}
+                <!-- <div class="d-flex align-items-center justify-content-center gap-2 w-100 w-auto"> -->
+                <div class="flex-grow-1">
+                    <div class="input-group flex-nowrap">
+                        <!-- search type select -->
+                        <select class="form-select rounded-start-5 w-auto" id="searchType" name="searchType">
+                            <option value="keyword" {% if search_type=='keyword' %}selected{% endif %}>Keyword
+                            </option>
+                            <option value="location" {% if search_type=='location' %}selected{% endif %}>
+                                Location
+                            </option>
+                        </select>
+                        <!-- search input -->
+                        <div class="position-relative flex-grow-1">
+                            <input type="text" class="form-control pe-5 rounded-0" id="searchInput" name="searchInput"
+                                list="locationList" placeholder="Enter search term"
+                                value="{{ search_input if search_input else '' }}">
+                            <datalist id="locationList"></datalist>
+                            <!-- clear button -->
+                            <button type="button"
+                                class="btn btn-link position-absolute end-0 top-50 translate-middle-y me-3 p-0"
+                                onclick="document.getElementById('searchInput').value=''; this.form.submit()">
+                                <i class="bi bi-x-circle-fill text-muted fs-5"></i>
+                            </button>
+                        </div>
+                        <!-- search button -->
+                        <button type="submit" class="btn btn-danger rounded-end-pill px-4 flex-shrink-1">Search
+                        </button>
+                    </div>
+                </div>
+                <!-- </div> -->
+                {% endif %}
+                {% if tab == 'my' %}
+                <div class="flex-grow-1">
+                    <!-- <div class="d-flex align-items-center justify-content-center gap-2 w-100 w-auto"> -->
+                    <button type="button" class="btn btn-danger rounded-5 w-100" data-bs-toggle="modal"
+                        data-bs-target="#journeySubmitModal">
+                        <i class="bi bi-plus-circle"></i><span class="d-none d-md-inline ms-2">create a new
+                            journey</span>
+                    </button>
+                </div>
+                <!-- </div> -->
+                {% endif %}
+
+            </div>
+        </div>
+    </form>
+</div>
+
+<script>
+    // submit form
+    document.querySelectorAll('input[name="tab"]').forEach(radio => {
+        radio.addEventListener('change', function () {
+            // change button style
+            document.querySelectorAll('input[name="tab"]').forEach(r => {
+                const label = document.querySelector(`label[for="${r.id}"]`);
+                if (label) {
+                    if (r.checked) {
+                        label.classList.remove('bg-white', 'btn-light');
+                        label.classList.add('btn-dark');
+                    } else {
+                        label.classList.remove('btn-dark');
+                        label.classList.add('bg-white', 'btn-light');
+                    }
+                }
+            });
+            this.form.submit();
+        });
+    });
+
+    // update notice and datalist when search type is changed
+    document.getElementById('searchType')?.addEventListener('change', function () {
+        const searchInput = document.getElementById('searchInput');
+        const locationList = document.getElementById('locationList');
+
+        if (this.value === 'location') {
+            searchInput.placeholder = 'Enter location name';
+            searchInput.setAttribute('list', 'locationList');
+            loadLocations();
+        } else {
+            searchInput.placeholder = 'Enter keyword';
+            searchInput.removeAttribute('list');
+            locationList.innerHTML = '';
+        }
+    });
+
+    // get location list
+    async function loadLocations() {
+        try {
+            const response = await apiRequest('{{ url_for("get_locations") }}', 'POST');
+            const locationList = document.getElementById('locationList');
+            locationList.innerHTML = ''; // Clear existing options
+
+            if (response.locations && response.locations.length > 0) {
+                response.locations.forEach(location => {
+                    const option = document.createElement('option');
+                    option.value = location.name;
+                    locationList.appendChild(option);
+                });
+            }
+        } catch (error) {
+            showMessage('Failed to load locations', 'error');
+        }
+    }
+
+    // if location is selected, get location list
+    if (document.getElementById('searchType')?.value === 'location') {
+        loadLocations();
+    }
+
+    // When the user selects an option from the location list, automatically submit the form
+    document.getElementById('searchInput')?.addEventListener('input', function (e) {
+        const searchType = document.getElementById('searchType').value;
+        // Only trigger auto-submit in location search mode
+        if (searchType === 'location') {
+            // Check if the user has selected a value from the datalist
+            const datalistOptions = document.getElementById('locationList').options;
+            const enteredValue = e.target.value;
+
+            for (let i = 0; i < datalistOptions.length; i++) {
+                if (datalistOptions[i].value === enteredValue) {
+                    // The user has selected a valid address, submit the form
+                    this.form.submit();
+                    break;
+                }
+            }
+        }
+    });
+</script>
+
+{% endblock %}
+
+{% block user_content %}
+{% include "components/journey_submit_modal.html" %}
+<section class="container pt-5 col-md-11 mt-5">
+    <div class="container py-5">
+        {% if journeys %}
+        <div class="row g-3" data-masonry='{"percentPosition": true }'>
+            {% for journey in journeys %}
+            <div class="col-sm-6 col-lg-4">
+                {% with small_card=true %}
+                {% include "components/journey_card.html" %}
+                {% endwith %}
+            </div>
+            {% endfor %}
+
+            <!-- pagination -->
+            <div id="pagination-container" class="d-flex justify-content-center mt-2 py-2" data-action="/helps">
+                {% include 'components/pagination.html' %}
+            </div>
+        </div>
+        {% else %}
+        <div class="text-center text-muted my-5">
+            <i class="bi bi-calendar-x fs-1"></i>
+            <p class="mt-3">There don't have any journey.</p>
+            {% if tab == 'my' %}
+            <p class="mt-3">Create a new journey please.</p>
+            {% endif %}
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %}

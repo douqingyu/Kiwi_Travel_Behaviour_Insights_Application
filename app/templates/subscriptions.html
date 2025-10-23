@@ -1,0 +1,634 @@
+{% extends 'userbase.html' %}
+
+{% block title %}Subscription Plans{% endblock %}
+
+{% set active_page = 'subscriptions' %}
+
+{% block user_head %}
+<div class="container col-md-8 p-2">
+    <div class="row justify-content-center text-center">
+        <div class="col-lg-7">
+            <h4>Subscription Plans</h4>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block user_content %}
+<section class="container pt-5 col-md-8 mt-5">
+    <div class="pt-5">
+        <ul class="nav nav-tabs mb-4" id="subscriptionTabs" role="tablist">
+            {% if session.get('role') == 'traveller' %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="current-tab" data-bs-toggle="tab" data-bs-target="#current"
+                        type="button" role="tab" aria-selected="true">
+                    Current Subscription
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
+                <button class="nav-link" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button"
+                        role="tab" aria-selected="false">
+                    Subscription History
+                </button>
+            </li>
+            {% else %}
+            <li class="nav-item" role="presentation">
+                <button class="nav-link active" id="history-tab" data-bs-toggle="tab" data-bs-target="#history" type="button"
+                        role="tab" aria-selected="true">
+                    Subscription History
+                </button>
+            </li>
+            {% endif %}
+        </ul>
+
+        <div class="tab-content" id="subscriptionTabsContent">
+            {% if session.get('role') == 'traveller' %}
+            <div class="tab-pane fade show active" id="current" role="tabpanel">
+                {% if current_subscription %}
+                <div class="rounded-4 shadow-sm bg-white mb-4 p-4">
+                    <h5 class="mb-3">Current Subscription</h5>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h6 class="mb-1">{{ current_subscription.plan_name }}</h6>
+                            <p class="text-muted mb-0">
+                                {% if current_subscription.is_free_trial %}
+                                Free Trial
+                                {% elif current_subscription.granted_by_admin %}
+                                <span class="badge bg-info">Admin Granted</span>
+                                {% endif %}
+                                Expires: {{ current_subscription.end_date.strftime('%Y-%m-%d') }}
+                            </p>
+                        </div>
+                        <span class="badge bg-success">Active</span>
+                    </div>
+                </div>
+                {% endif %}
+
+                <div class="row g-4">
+                    {% for plan in plans %}
+                    <div class="col-md-6">
+                        <div class="card h-100 rounded-4 border-0 {% if current_subscription and current_subscription.plan_id == plan.id %}border-primary{% endif %}">
+                            <div class="card-body rounded-4 border-0 shadow-sm d-flex flex-column">
+                                <h5 class="card-title">{{ plan.name }}</h5>
+                                <div class="d-flex align-items-baseline mb-3">
+                                    <h2 class="mb-0">
+                                        {% if billing_country == 'NZ' %}
+                                        ${{ "%.2f"|format(plan.price_nz) }}
+                                        {% else %}
+                                        ${{ "%.2f"|format(plan.price_other) }}
+                                        {% endif %}
+                                    </h2>
+                                    <span class="text-muted ms-2">/{{ plan.months }} months</span>
+                                </div>
+
+                                {% if plan.discount %}
+                                <div class="badge bg-danger mb-3">{{ plan.discount }}% OFF</div>
+                                {% endif %}
+
+                                <ul class="list-unstyled mb-4">
+                                    {% for feature in plan.features %}
+                                    <li class="mb-2">
+                                        <i class="bi bi-check-circle-fill text-success me-2"></i>
+                                        {{ feature }}
+                                    </li>
+                                    {% endfor %}
+                                </ul>
+
+                                {% if plan.months == 0 %}
+                                <div class="alert alert-info mb-3">
+                                    <i class="bi bi-info-circle-fill me-2"></i>
+                                    During the free trial, you can experience all premium features. After the trial
+                                    period ends, your subscription will automatically downgrade to the free version.
+                                </div>
+                                {% endif %}
+
+                                <div class="mt-auto">
+                                    {% if current_subscription and current_subscription.plan_id == plan.id %}
+                                    <button class="btn btn-danger w-100 rounded-5">Current Plan</button>
+                                    {% else %}
+                                    <button class="btn btn-dark w-100 rounded-5 border-0"
+                                            data-plan-id="{{ plan.id }}"
+                                            {% if plan.months == 0 and not can_start_trial %}disabled title="You have already used your free trial."{% endif %}
+                                            onclick="upgradePlan(this.getAttribute('data-plan-id'))">
+                                        {% if plan.id == 1 %}
+                                            {% if current_subscription and current_subscription.is_free_trial %}
+                                                Upgrade Now
+                                            {% else %}
+                                                Start Free Trial
+                                            {% endif %}
+                                        {% else %}
+                                            {% if current_subscription and current_subscription.is_free_trial %}
+                                                Upgrade Now
+                                            {% else %}
+                                                Subscribe Now
+                                            {% endif %}
+                                        {% endif %}
+                                    </button>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <div class="tab-pane fade {% if session.get('role') != 'traveller' %}show active{% endif %}" id="history" role="tabpanel">
+                <div class="card rounded-4 shadow-sm">
+                    <div class="card-body">
+                        <div class="table-responsive">
+                            <table class="table table-hover">
+                                <thead>
+                                <tr>
+                                    <th>Plan</th>
+                                    <th>Start Date</th>
+                                    <th>End Date</th>
+                                    <th>Amount</th>
+                                    <th>GST</th>
+                                    <th>Billing Country</th>
+                                    <th>Type</th>
+                                    <th>Actions</th>
+                                </tr>
+                                </thead>
+                                <tbody id="subscriptionHistoryTable">
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+
+    </div>
+</section>
+
+
+<div class="modal fade" id="upgradeModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered modal-xl">
+        <div class="modal-content border-0 rounded-4">
+            <div class="modal-header bg-black text-white border-0 rounded-top-4 px-4">
+                <h5 class="modal-title">
+                    <i class="bi bi-credit-card-2-front me-2"></i>
+                    Upgrade Subscription
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body border-0 p-4">
+                <div id="freeTrialForm" style="display: none;">
+                    <div class="text-center mb-4">
+                        <div class="display-4 mb-3">
+                            <i class="bi bi-gift text-primary"></i>
+                        </div>
+                        <h4 id="freeTrialPlanName" class="mb-3"></h4>
+                        <input type="hidden" id="freeTrialPlanId">
+                    </div>
+                    <div class="alert alert-info rounded-4">
+                        <i class="bi bi-info-circle-fill me-2"></i>
+                        During the free trial, you can experience all premium features. After the trial period ends,
+                        your subscription will automatically downgrade to the free version.
+                    </div>
+                </div>
+
+                <div id="paymentForm" style="display: none;">
+                    <div class="row g-4">
+                        <div class="col-12 col-lg-6" id="planDetailsCard">
+                            <div class="h-100 border-0 rounded-4">
+                                <div class="p-4">
+                                    <h5 class=" mb-4">
+                                        <i class="bi bi-credit-card me-2"></i>
+                                        Plan Details
+                                    </h5>
+                                    <div class="text-center mb-4">
+                                        <h4 id="selectedPlanInfo" class="mb-3"></h4>
+                                        <input type="hidden" id="planId">
+                                    </div>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm">
+                                            <tr class="py-2">
+                                                <td class="py-2">Plan:</td>
+                                                <td id="planName" class="text-end py-2"></td>
+                                            </tr>
+                                            <tr class="py-2">
+                                                <td class="py-2">Total Months:</td>
+                                                <td id="totalMonths" class="text-end py-2"></td>
+                                            </tr>
+                                            <tr class="py-2">
+                                                <td class="py-2">Base Price:</td>
+                                                <td id="basePrice" class="text-end py-2"></td>
+                                            </tr>
+                                            <tr class="py-2">
+                                                <td class="py-2">Discount:</td>
+                                                <td id="discountRate" class="text-end py-2"></td>
+                                            </tr>
+                                            <tr class="py-2">
+                                                <td class="py-2">Discounted Price:</td>
+                                                <td id="discountedPrice" class="text-end py-2"></td>
+                                            </tr>
+                                            <tr class="py-2">
+                                                <td class="py-2">GST:</td>
+                                                <td id="gstAmount" class="text-end py-2"></td>
+                                            </tr>
+                                            <tr class="table-primary py-2">
+                                                <td class="py-2"><strong>Total:</strong></td>
+                                                <td id="totalAmount" class="text-end py-2"></td>
+                                            </tr>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="col-12 col-lg-6" id="paymentInfoCard">
+                            <div class="card h-100 border-0 rounded-4">
+                                <div class="card-body p-4">
+                                    <h5 class="card-title mb-4">
+                                        <i class="bi bi-shield-lock me-2"></i>
+                                        Payment Information
+                                    </h5>
+                                    <form id="paymentInfoForm">
+                                        <div class="row g-3">
+                                            <div class="col-12">
+                                                <label for="billingCountry" class="form-label">Billing Country</label>
+                                                <select class="form-select" id="billingCountry" required>
+                                                    <option value="">Select a country</option>
+                                                    <option value="NZ">New Zealand</option>
+                                                    <option value="AU">Australia</option>
+                                                    <option value="US">United States</option>
+                                                    <option value="UK">United Kingdom</option>
+                                                    <option value="CA">Canada</option>
+                                                    <option value="OTHER">Other</option>
+                                                </select>
+                                            </div>
+                                            <div class="col-12">
+                                                <label for="cardNumber" class="form-label">Card Number</label>
+                                                <div class="input-group">
+                                                    <input type="text" class="form-control rounded-end-0"
+                                                           id="cardNumber" placeholder="1234 5678 9012 3456" required>
+                                                    <span class="input-group-text bg-white border-start-0 rounded-end">
+                                                        <img src="https://cdn4.iconfinder.com/data/icons/flat-brand-logo-2/512/visa-512.png"
+                                                             alt="Visa" height="20" class="me-1">
+                                                        <img src="https://i.pinimg.com/736x/30/a2/16/30a21682aa7aed4366ce5da18d5c4af4.jpg"
+                                                             alt="Mastercard" height="20">
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="expiryDate" class="form-label">Expiry Date</label>
+                                                <input type="text" class="form-control" id="expiryDate"
+                                                       placeholder="MM/YY" required>
+                                            </div>
+                                            <div class="col-md-6">
+                                                <label for="cvv" class="form-label">CVV</label>
+                                                <input type="text" class="form-control" id="cvv" placeholder="123"
+                                                       required>
+                                            </div>
+                                            <div class="col-12">
+                                                <label for="cardholderName" class="form-label">Cardholder Name</label>
+                                                <input type="text" class="form-control" id="cardholderName"
+                                                       placeholder="John Doe" required>
+                                            </div>
+                                            <div class="col-12">
+                                                <label for="billingAddress" class="form-label">Billing Address</label>
+                                                <input type="text" class="form-control" id="billingAddress"
+                                                       placeholder="123 Main St" required>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label for="city" class="form-label">City</label>
+                                                <input type="text" class="form-control" id="city" required>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label for="state" class="form-label">State/Province</label>
+                                                <input type="text" class="form-control" id="state" required>
+                                            </div>
+                                            <div class="col-md-4">
+                                                <label for="postalCode" class="form-label">Postal Code</label>
+                                                <input type="text" class="form-control" id="postalCode" required>
+                                            </div>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer border-0 p-4">
+                <button type="button" class="btn rounded-5 px-4" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-dark rounded-5 px-4" id="confirmButton">
+                    <i class="bi bi-check-circle me-2"></i>
+                    Confirm
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="modal fade" id="expiryModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content rounded-4">
+            <div class="modal-header bg-warning text-dark border-0 rounded-top-4">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle-fill me-2"></i>
+                    Free Trial Expired
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body text-center p-4">
+                <div class="display-1 text-warning mb-3">
+                    <i class="bi bi-exclamation-triangle-fill"></i>
+                </div>
+                <p id="expiryMessage" class="h5 mb-3"></p>
+                <p id="expiryCountdown" class="text-muted"></p>
+            </div>
+            <div class="modal-footer border-0 rounded-bottom-4">
+                <button type="button" class="btn btn-secondary rounded-4 px-4" data-bs-dismiss="modal">Close</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Introduce the subscription details modal component -->
+{% include 'components/subscription_detail_modal.html' %}
+
+<script>
+    const currentSubscription = JSON.parse('{{ current_subscription|tojson|safe if current_subscription else "null" }}');
+    
+    // Get subscription history when the page loads
+    document.addEventListener('DOMContentLoaded', function () {
+        const isTraveller = '{{ session.get("role") }}' === 'traveller';
+        if (!isTraveller) {
+            loadSubscriptionHistory();
+        }
+
+        // Listen for tab switching events
+        document.getElementById('history-tab').addEventListener('shown.bs.tab', function () {
+            loadSubscriptionHistory();
+        });
+
+        const confirmButton = document.getElementById('confirmButton');
+        if (confirmButton) {
+            confirmButton.addEventListener('click', function () {
+                console.log('Confirm button clicked');
+
+                const upgradeModal = document.getElementById('upgradeModal');
+                const modal = bootstrap.Modal.getInstance(upgradeModal);
+                const isFreePlan = document.getElementById('freeTrialForm').style.display !== 'none';
+
+                let planId;
+                let paymentInfo = null;
+
+                if (isFreePlan) {
+                    planId = document.getElementById('freeTrialPlanId').value;
+                } else {
+                    planId = document.getElementById('planId').value;
+
+                    const paymentForm = document.getElementById('paymentInfoForm');
+                    if (!paymentForm.checkValidity()) {
+                        paymentForm.reportValidity();
+                        return;
+                    }
+
+                    paymentInfo = {
+                        cardNumber: document.getElementById('cardNumber').value,
+                        expiryDate: document.getElementById('expiryDate').value,
+                        cvv: document.getElementById('cvv').value,
+                        cardholderName: document.getElementById('cardholderName').value,
+                        billingAddress: document.getElementById('billingAddress').value,
+                        city: document.getElementById('city').value,
+                        state: document.getElementById('state').value,
+                        postalCode: document.getElementById('postalCode').value
+                    };
+                }
+
+                const confirmButton = this;
+                const originalText = confirmButton.innerHTML;
+                confirmButton.disabled = true;
+                confirmButton.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+
+                apiRequest('/subscription/payment', 'POST',
+                    {
+                        plan_id: planId,
+                        billing_country: document.getElementById('billingCountry').value,
+                        is_free_trial: planId === '1',
+                        granted_by_admin: false,
+                        payment_info: paymentInfo,
+                        upgrade_from_trial: currentSubscription && currentSubscription.is_free_trial
+                    }
+                )
+                    .then(data => {
+                        console.log('Response data:', data);
+                        if (data.success) {
+                            modal.hide();
+
+                            showMessage(planId === '1' ? 'Free trial has started!' : 'Subscription successful! Your premium features are now active.', 'success');
+
+                            window.location.reload();
+                        } else {
+                            if (data.error_code === 'INVALID_PAYMENT') {
+                                showMessage('Payment information is invalid. Please check and try again.', 'error');
+                            } else {
+                                showMessage(data.error_message || 'Subscription failed, please try again later.', 'error');
+                            }
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        showMessage('Subscription failed, please try again later.', 'error');
+                    })
+                    .finally(() => {
+                        confirmButton.disabled = false;
+                        confirmButton.innerHTML = originalText;
+                    });
+            });
+        }
+
+        const cardNumber = document.getElementById('cardNumber');
+        if (cardNumber) {
+            cardNumber.addEventListener('input', function (e) {
+                let value = e.target.value.replace(/\D/g, '');
+                let formattedValue = '';
+                for (let i = 0; i < value.length; i++) {
+                    if (i > 0 && i % 4 === 0) {
+                        formattedValue += ' ';
+                    }
+                    formattedValue += value[i];
+                }
+                e.target.value = formattedValue;
+            });
+        }
+
+        const expiryDate = document.getElementById('expiryDate');
+        if (expiryDate) {
+            expiryDate.addEventListener('input', function (e) {
+                let value = e.target.value.replace(/\D/g, '');
+                if (value.length > 2) {
+                    value = value.substring(0, 2) + '/' + value.substring(2, 4);
+                }
+                e.target.value = value;
+            });
+        }
+
+        const cvv = document.getElementById('cvv');
+        if (cvv) {
+            cvv.addEventListener('input', function (e) {
+                e.target.value = e.target.value.replace(/\D/g, '').substring(0, 3);
+            });
+        }
+    });
+
+    // Load subscription history
+    function loadSubscriptionHistory() {
+        apiRequest('/subscription/history', 'GET')
+            .then(data => {
+                if (data.success) {
+                    displaySubscriptionHistory(data.subscriptions);
+                } else {
+                    showMessage(data.error || 'Failed to load subscription history.', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                showMessage('Failed to load subscription history.', 'error');
+            });
+    }
+
+    // Get subscription history
+    function displaySubscriptionHistory(subscriptions) {
+        const table = document.getElementById('subscriptionHistoryTable');
+        table.innerHTML = '';
+
+        subscriptions.forEach(sub => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                    <td>${sub.name}</td>
+                    <td>${new Date(sub.start_date).toLocaleDateString()}</td>
+                    <td>${new Date(sub.end_date).toLocaleDateString()}</td>
+                    <td>$${sub.payment_amount}</td>
+                    <td>$${sub.gst_amount}</td>
+                    <td>${sub.billing_country}</td>
+                    <td>
+                        ${sub.is_free_trial ? '<span class="badge bg-info">Free Trial</span>' :
+                sub.granted_by_admin ? '<span class="badge bg-success">Admin Granted</span>' :
+                    '<span class="badge bg-primary">Paid</span>'}
+                    </td>
+                    <td>
+                        ${sub.is_free_trial ? '' : `<button class="btn btn-sm btn-outline-dark rounded-5" onclick="showSubscriptionDetail(${sub.id})">View</button>`}
+                    </td>
+                `;
+            table.appendChild(row);
+        });
+    }
+
+    // upgrade plan
+    function upgradePlan(planId) {
+        const plans = JSON.parse('{{ plans|tojson|safe }}');
+        console.log(plans);
+        
+        const canStartTrial = JSON.parse('{{ can_start_trial|tojson|safe }}');
+        
+        const planIdNum = parseInt(planId);
+        const selectedPlan = plans.find(p => p.id === planIdNum);
+        console.log('Selected Plan:', selectedPlan);
+        
+        const isFreePlan = planIdNum === 1;
+        
+        if (isFreePlan && !canStartTrial) {
+            const modal = new bootstrap.Modal(document.getElementById('expiryModal'));
+            document.getElementById('expiryMessage').textContent = 'You have already used your free trial.';
+            document.getElementById('expiryCountdown').textContent = 'Please select another subscription plan to continue.';
+            modal.show();
+            return;
+        }
+
+        const freeTrialForm = document.getElementById('freeTrialForm');
+        const paymentForm = document.getElementById('paymentForm');
+        const confirmButton = document.getElementById('confirmButton');
+        const paymentInfoCard = document.getElementById('paymentInfoCard');
+
+        if (!freeTrialForm || !paymentForm || !confirmButton || !paymentInfoCard) {
+            console.error('Required elements not found');
+            return;
+        }
+
+        if (isFreePlan) {
+            document.getElementById('freeTrialPlanId').value = planId;
+            document.getElementById('freeTrialPlanName').textContent = selectedPlan.name;
+
+            freeTrialForm.style.display = 'block';
+            paymentForm.style.display = 'none';
+            confirmButton.textContent = 'Start Free Trial';
+
+            paymentInfoCard.style.display = 'none';
+        } else {
+            document.getElementById('planId').value = planId;
+            document.getElementById('selectedPlanInfo').textContent = selectedPlan.name;
+
+            // update price
+            updatePriceInfo(selectedPlan);
+
+            freeTrialForm.style.display = 'none';
+            paymentForm.style.display = 'block';
+            confirmButton.textContent = 'Pay Now';
+
+            paymentInfoCard.style.display = 'block';
+        }
+
+        new bootstrap.Modal(document.getElementById('upgradeModal')).show();
+    }
+
+    function updatePriceInfo(plan) {
+        const billingCountry = document.getElementById('billingCountry').value;
+        const isNZ = billingCountry === 'NZ';
+        
+        const basePrice = parseFloat(isNZ ? plan.price_nz : plan.price_other);
+        const totalMonths = plan.months;
+        
+        // get discount
+        let discountAmount = 0;
+        if (plan.discount) {
+            discountAmount = basePrice * (parseFloat(plan.discount) / 100);
+        }
+        const discountedPrice = basePrice - discountAmount;
+
+        // get GST
+        let gst = 0;
+        if (isNZ) {
+            const priceWithoutGst = parseFloat(plan.price_other);
+            const discountWithoutGst = plan.discount ? priceWithoutGst * (parseFloat(plan.discount) / 100) : 0;
+            const discountedPriceWithoutGst = priceWithoutGst - discountWithoutGst;
+            gst = discountedPrice - discountedPriceWithoutGst;
+        }
+
+        // update price
+        const formatPrice = (price) => {
+            return typeof price === 'number' ? price.toFixed(2) : '0.00';
+        };
+
+        document.getElementById('totalMonths').textContent = totalMonths;
+        document.getElementById('basePrice').textContent = `$${formatPrice(basePrice)}`;
+        document.getElementById('discountRate').textContent = plan.discount ?
+            `${plan.discount}% (-$${formatPrice(discountAmount)})` : '-';
+        document.getElementById('discountedPrice').textContent = `$${formatPrice(discountedPrice)}`;
+        document.getElementById('gstAmount').textContent = isNZ ? `$${formatPrice(gst)}` : '-';
+        document.getElementById('totalAmount').textContent = `$${formatPrice(discountedPrice)}`;
+    }
+
+    document.addEventListener('DOMContentLoaded', function() {
+        const billingCountrySelect = document.getElementById('billingCountry');
+        if (billingCountrySelect) {
+            billingCountrySelect.addEventListener('change', function() {
+                const planId = document.getElementById('planId').value;
+                if (planId) {
+                    const plans = JSON.parse('{{ plans|tojson|safe }}');
+                    const selectedPlan = plans.find(p => p.id === parseInt(planId));
+                    if (selectedPlan) {
+                        updatePriceInfo(selectedPlan);
+                    }
+                }
+            });
+        }
+    });
+</script>
+{% endblock %} 

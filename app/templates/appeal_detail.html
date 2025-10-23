@@ -1,0 +1,71 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row">
+        <div class="col-md-8 mx-auto">
+            <div class="card">
+                <div class="card-header">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h4 class="mb-0">Appeal Details</h4>
+                        <a href="{{ url_for('appeals') }}" class="btn btn-outline-secondary btn-sm">
+                            <i class="bi bi-arrow-left"></i> Back to Appeals
+                        </a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex align-items-center mb-4">
+                        <img src="{{ appeal.profile_image or url_for('static', filename='images/default_profile.png') }}" 
+                             class="rounded-circle me-3" 
+                             style="width: 60px; height: 60px; object-fit: cover;">
+                        <div>
+                            <h5 class="mb-1">{{ appeal.first_name }} {{ appeal.last_name }}</h5>
+                            <p class="text-muted mb-0">{{ appeal.username }}</p>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <h6>Appeal Type</h6>
+                        <p class="text-capitalize">{{ appeal.appeal_type|replace('_', ' ') }}</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <h6>Content</h6>
+                        <p>{{ appeal.content }}</p>
+                    </div>
+
+                    <div class="mb-4">
+                        <h6>Status</h6>
+                        <span class="badge {% if appeal.status == 'pending' %}bg-warning{% else %}bg-success{% endif %}">
+                            {{ appeal.status|title }}
+                        </span>
+                    </div>
+
+                    <div class="mb-4">
+                        <h6>Submitted</h6>
+                        <p>{{ appeal.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+                    </div>
+
+                    {% if appeal.status == 'pending' %}
+                    <div class="mt-4">
+                        <h6>Actions</h6>
+                        <form action="{{ url_for('resolve_appeal', appeal_id=appeal.id) }}" method="POST" class="d-inline">
+                            <input type="hidden" name="action" value="approve">
+                            <button type="submit" class="btn btn-success me-2">
+                                <i class="bi bi-check-circle"></i> Approve
+                            </button>
+                        </form>
+                        <form action="{{ url_for('resolve_appeal', appeal_id=appeal.id) }}" method="POST" class="d-inline">
+                            <input type="hidden" name="action" value="reject">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-x-circle"></i> Reject
+                            </button>
+                        </form>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

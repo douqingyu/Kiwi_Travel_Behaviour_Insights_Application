@@ -1,0 +1,92 @@
+{#pagination component#}
+<nav aria-label="Page navigation" class="{% if total_pages <= 1 %}d-none{% endif %}">
+    <ul class="pagination">
+        {% if current_page > 1 %}
+            <li class="page-item">
+                <a class="page-link ms-1 text-black border-dark shadow-sm" href="#" aria-label="Previous"
+                   onclick="submitPageForm({{ current_page }} - 1)">
+                    <span aria-hidden="true">&laquo;</span>
+                </a>
+            </li>
+        {% endif %}
+
+        {% for page_num in range(1, total_pages + 1) %}
+            <li class="page-item {% if page_num == current_page %}active{% endif %}" aria-label="page_{{ page_num }}">
+                <a class="page-link ms-1 shadow-sm
+                      {% if page_num == current_page %}bg-black text-white border-dark{% else %}text-black border-dark{% endif %}"
+                   href="#"
+                   onclick="submitPageForm({{ page_num }})">
+                    {{ page_num }}
+                </a>
+            </li>
+        {% endfor %}
+
+        {% if current_page < total_pages %}
+            <li class="page-item">
+                <a class="page-link ms-1 text-black border-dark shadow-sm" href="#" aria-label="Next"
+                   onclick="submitPageForm({{ current_page }} + 1)">
+                    <span aria-hidden="true">&raquo;</span>
+                </a>
+            </li>
+        {% endif %}
+    </ul>
+</nav>
+
+<script>
+    function submitPageForm(page) {
+        const form = document.createElement('form');
+        form.method = 'post';
+        form.action = document.getElementById('pagination-container').getAttribute('data-action');
+        const urlParams = new URLSearchParams(window.location.search);
+
+        let pageNumber = page;
+
+        const inputPage = document.createElement('input');
+        inputPage.type = 'hidden';
+        inputPage.name = 'page';
+        inputPage.value = pageNumber;
+        form.appendChild(inputPage);
+
+        // add tab param
+        const currentTab = '{{ tab }}';
+        if (currentTab) {
+            const inputTab = document.createElement('input');
+            inputTab.type = 'hidden';
+            inputTab.name = 'tab';
+            inputTab.value = currentTab;
+            form.appendChild(inputTab);
+        }
+
+        // add search params
+        const searchType = '{{ search_type }}';
+        if (searchType) {
+            const inputSearchType = document.createElement('input');
+            inputSearchType.type = 'hidden';
+            inputSearchType.name = 'searchType';
+            inputSearchType.value = searchType;
+            form.appendChild(inputSearchType);
+        }
+
+        const searchInput = '{{ search_input }}';
+        if (searchInput) {
+            const inputSearchInput = document.createElement('input');
+            inputSearchInput.type = 'hidden';
+            inputSearchInput.name = 'searchInput';
+            inputSearchInput.value = searchInput;
+            form.appendChild(inputSearchInput);
+        }
+
+        urlParams.forEach((value, key) => {
+            if (key !== 'page' && key !== 'tab' && key !== 'searchType' && key !== 'searchInput') {
+                const input = document.createElement('input');
+                input.type = 'hidden';
+                input.name = key;
+                input.value = value;
+                form.appendChild(input);
+            }
+        });
+
+        document.body.appendChild(form);
+        form.submit();
+    }
+</script>

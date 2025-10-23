@@ -1,0 +1,118 @@
+{% extends 'userbase.html' %}
+
+{% block title %}编辑历史记录{% endblock %}
+
+{% set active_page = 'admin' %}
+
+{% block user_head %}
+<div class="container col-md-8 p-2">
+    <form method="post" action="/admin/edit/history" class="d-flex flex-column gap-2">
+        <div class="d-flex flex-column flex-md-row align-items-center justify-content-center gap-2 p-2 rounded-5 bg-body-secondary">
+            <!-- 过滤选项 -->
+            <div class="d-flex align-items-center justify-content-center gap-2 w-100 w-md-auto">
+                <div class="flex-grow-1">
+                    <select class="form-select rounded-5" id="editor_id" name="editor_id">
+                        <option value="">select an administrator</option>
+                        {% for staff in staff_members %}
+                        <option value="{{ staff.id }}" {% if editor_id|int == staff.id %}selected{% endif %}>
+                            {{ staff.username }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="flex-grow-1">
+                    <select class="form-select rounded-5" id="edit_type" name="edit_type">
+                        <option value="">select a type</option>
+                        <option value="text" {% if edit_type == 'text' %}selected{% endif %}>text</option>
+                        <option value="image" {% if edit_type == 'image' %}selected{% endif %}>image</option>
+                        <option value="location" {% if edit_type == 'location' %}selected{% endif %}>location</option>
+                    </select>
+                </div>
+                <div class="flex-grow-1">
+                    <button type="submit" class="btn btn-danger rounded-5 w-100">
+                        <i class="bi bi-search"></i> search
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}
+
+{% block user_content %}
+<section class="container pt-5 col-md-11 mt-5">
+    <div class="container py-5">
+        {% if edit_history %}
+        <div class="row g-3" data-masonry='{"percentPosition": true }'>
+            {% for record in edit_history %}
+            <div class="col-sm-6 col-lg-4">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h5 class="card-title mb-1">
+                                    {% if record.journey_id %}
+                                    <a href="{{ url_for('get_journeys', journey_id=record.journey_id) }}" class="text-decoration-none">
+                                        journey: {{ record.journey_title }}
+                                    </a>
+                                    {% endif %}
+                                </h5>
+                                {% if record.event_id %}
+                                <p class="text-muted mb-0">
+                                    <small>event: {{ record.event_title }}</small>
+                                </p>
+                                {% endif %}
+                            </div>
+                            <div>
+                                {% if record.edit_type == 'text' %}
+                                <span class="badge bg-info">text</span>
+                                {% elif record.edit_type == 'image' %}
+                                <span class="badge bg-success">image</span>
+                                {% elif record.edit_type == 'location' %}
+                                <span class="badge bg-warning">location</span>
+                                {% endif %}
+                            </div>
+                        </div>
+                        <p class="card-text">{{ record.edit_reason }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <small class="text-muted">
+                                <i class="bi bi-person"></i> {{ record.editor_username }}
+                            </small>
+                            <small class="text-muted">
+                                <i class="bi bi-clock"></i> {{ record.created_at.strftime('%Y-%m-%d %H:%M:%S') }}
+                            </small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+
+            <!-- 分页 -->
+            {% if total_pages > 1 %}
+            <div class="col-12">
+                <nav aria-label="Page navigation" class="mt-4">
+                    <ul class="pagination justify-content-center">
+                        {% for page in range(1, total_pages + 1) %}
+                        <li class="page-item {% if page == current_page %}active{% endif %}">
+                            <form method="POST" style="display: inline;">
+                                <input type="hidden" name="page" value="{{ page }}">
+                                <input type="hidden" name="editor_id" value="{{ editor_id }}">
+                                <input type="hidden" name="edit_type" value="{{ edit_type }}">
+                                <button type="submit" class="page-link">{{ page }}</button>
+                            </form>
+                        </li>
+                        {% endfor %}
+                    </ul>
+                </nav>
+            </div>
+            {% endif %}
+        </div>
+        {% else %}
+        <div class="text-center text-muted my-5">
+            <i class="bi bi-clock-history fs-1"></i>
+            <p class="mt-3">no record</p>
+        </div>
+        {% endif %}
+    </div>
+</section>
+{% endblock %} 

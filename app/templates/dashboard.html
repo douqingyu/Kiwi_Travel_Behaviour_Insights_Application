@@ -1,0 +1,195 @@
+{% extends 'userbase.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{# Set the active page to be highlighted in the navigation bar. #}
+{% set active_page = 'dashboard' %}
+
+{% block user_content %}
+    <div class="container pt-5">
+        <!-- User Profile Section -->
+        <div class="row mt-3 py-2">
+            <div class="col-12">
+                <div class="card border-0 shadow-sm rounded-4">
+                    <div class="card-body">
+                        <div class="row align-items-center">
+                            <div class="col-auto">
+                                {% with profile_image=session.profile_image, first_name=session.first_name, show_avatar_modal=True, size=64, user_id=session.user_id %}
+                                    {% include 'components/avatar_lg.html' %}
+                                {% endwith %}
+                            </div>
+                            <div class="col">
+                                <h4 class="mb-1">{{ user.first_name }} {{ user.last_name }}</h4>
+                                <p class="text-muted mb-0">{{ user.username }}</p>
+                            </div>
+                            <div class="col-auto">
+                                <span class="badge {% if user.role == 'admin' %}bg-warning{% elif user.role == 'editor' %}bg-info{% else %}bg-primary{% endif %}">
+                                    {{ user.role }}
+                                </span>
+                            </div>
+                            <div class="col-auto">
+                                <a href="{{ url_for('profile') }}" class="btn btn-outline-dark rounded-5 px-3">
+                                    View Profile
+                                </a>
+                            </div>
+                        </div>
+                        
+                        <!-- Stats Row -->
+                        <div class="row mt-3">
+                            {% if user.role == 'admin' %}
+                                <div class="col-6 col-sm-6 col-md-3 mb-3 mb-md-0">
+                                    <div class="p-2 text-center h-100">
+                                        <div class="d-flex align-items-center justify-content-center">
+                                            <i class="bi bi-journal-richtext fs-5 me-2 text-primary"></i>
+                                            <h3 class="mb-0 fw-bold">{{ journey_count }}</h3>
+                                        </div>
+                                        <p class="mb-0 mt-1 small text-muted">My Journeys</p>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-sm-6 col-md-3 mb-3 mb-md-0">
+                                    <div class="p-2 text-center h-100">
+                                        <div class="d-flex align-items-center justify-content-center">
+                                            <i class="bi bi-calendar-event fs-5 me-2 text-success"></i>
+                                            <h3 class="mb-0 fw-bold">{{ event_count }}</h3>
+                                        </div>
+                                        <p class="mb-0 mt-1 small text-muted">My Events</p>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-sm-6 col-md-3 mb-3 mb-md-0">
+                                    <div class="p-2 text-center h-100">
+                                        <div class="d-flex align-items-center justify-content-center">
+                                            <i class="bi bi-people fs-5 me-2 text-info"></i>
+                                            <h3 class="mb-0 fw-bold">{{ all_users_count }}</h3>
+                                        </div>
+                                        <p class="mb-0 mt-1 small text-muted">Users</p>
+                                    </div>
+                                </div>
+                                <div class="col-6 col-sm-6 col-md-3 mb-3 mb-md-0">
+                                    <div class="p-2 text-center h-100">
+                                        <div class="d-flex align-items-center justify-content-center">
+                                            <i class="bi bi-globe fs-5 me-2 text-warning"></i>
+                                            <h3 class="mb-0 fw-bold">{{ public_journeys_count }}</h3>
+                                        </div>
+                                        <p class="mb-0 mt-1 small text-muted">All Public Journeys</p>
+                                    </div>
+                                </div>
+                            {% else %}
+                                <div class="col-6 mb-3 mb-md-0">
+                                    <div class="p-2 text-center h-100">
+                                        <div class="d-flex align-items-center justify-content-center">
+                                            <i class="bi bi-journal-richtext fs-5 me-2 text-primary"></i>
+                                            <h3 class="mb-0 fw-bold">{{ journey_count }}</h3>
+                                        </div>
+                                        <p class="mb-0 mt-1 small text-muted">My Journeys</p>
+                                    </div>
+                                </div>
+                                <div class="col-6 mb-3 mb-md-0">
+                                    <div class="p-2 text-center h-100">
+                                        <div class="d-flex align-items-center justify-content-center">
+                                            <i class="bi bi-calendar-event fs-5 me-2 text-success"></i>
+                                            <h3 class="mb-0 fw-bold">{{ event_count }}</h3>
+                                        </div>
+                                        <p class="mb-0 mt-1 small text-muted">My Events</p>
+                                    </div>
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Main Content Section -->
+        <div class="row g-2">
+            <!-- Left Column -->
+            <div class="col-xl-4">
+                <!-- Announcements Section -->
+                <div class="card border-0 shadow-sm rounded-4 p-2">
+                    <div class="card-header bg-white border-0 rounded-top-4 py-3 d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Announcements</h5>
+                        {% if user.role == 'admin' %}
+                            <button type="button" class="btn btn-dark rounded-5 px-3" data-bs-toggle="modal" data-bs-target="#announcementSubmitModal">
+                                <i class="bi bi-plus-lg"></i> <span class="d-none d-xl-inline">New</span>
+                            </button>
+                        {% endif %}
+                    </div>
+                    <div class="card-body p-0">
+                        {% if announcements %}
+                            <div class="list-group list-group-flush">
+                                {% for announcement in announcements %}
+                                    <div class="list-group-item border-0 {% if loop.last %}rounded-bottom-4{% endif %}">
+                                        <div class="d-flex align-items-center">
+{#                                            {% with profile_image=announcement.profile_image, first_name=announcement.first_name, size=40 %}#}
+{#                                                {% include 'components/avatar_lg.html' %}#}
+{#                                            {% endwith %}#}
+                                            <div>
+                                                <h6 class="mb-1">{{ announcement.title }}</h6>
+                                                <p class="mb-1 text-muted small">{{ announcement.content }}</p>
+                                                <small class="text-muted">{{ announcement.created_at.strftime('%d/%m/%Y %H:%M') }}</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% if not loop.last %}
+                                        <hr class="my-0">
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-5 pb-5 text-muted">
+                                No announcements yet
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column -->
+            <div class="col-xl-8">
+                <!-- Journeys Section -->
+                <div class="card border-0 shadow-sm rounded-4 mt-xl-0 p-2">
+                    <div class="card-header bg-white border-0 rounded-top-4 py-3 d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">Recent 5 Journeys</h5>
+                        <div>
+                            <a href="{{ url_for('journeys') }}" class="btn btn-outline-dark rounded-5 px-3 me-2">
+                                View All
+                            </a>
+                            <button type="button" class="btn btn-dark rounded-5 px-3" data-bs-toggle="modal" data-bs-target="#journeySubmitModal">
+                                <i class="bi bi-plus-lg"></i> New Journey
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body p-0">
+                        {% if journeys %}
+                            <div class="list-group list-group-flush">
+                                {% for journey in journeys %}
+                                    <div class="list-group-item border-0 {% if loop.last %}rounded-bottom-4{% endif %}">
+                                        <div class="row d-flex justify-content-between align-items-center">
+                                            <div class="col" onclick="window.location.href='/journey/detail/{{ journey.id }}'">
+                                                <h6 class="mb-1">{{ journey.title }}</h6>
+                                                <p class="mb-1 text-muted small">{{ journey.description }}</p>
+                                                <small class="text-muted">Started: {{ journey.start_date.strftime('%d/%m/%Y') }}</small>
+                                            </div>
+                                            <div class="col-auto">
+                                                {% include "components/journey_option.html" %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                    {% if not loop.last %}
+                                        <hr class="my-0">
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            <div class="text-center py-4 text-muted">
+                                No journeys yet. Create your first journey!
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% include 'components/journey_submit_modal.html' %}
+    {% include 'components/announcement_submit_modal.html' %}
+{% endblock %}

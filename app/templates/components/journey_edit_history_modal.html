@@ -1,0 +1,159 @@
+<div class="modal fade" id="journeyEditHistoryModal{{ journey_id }}" tabindex="-1" aria-labelledby="journeyEditHistoryModalLabel{{ journey_id }}" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered modal-dialog-scrollable">
+        <div class="modal-content border-0 rounded-4">
+            <div class="modal-header bg-black text-white border-0 rounded-top-4 px-4">
+                <h5 class="modal-title" id="journeyEditHistoryModalLabel{{ journey_id }}">Edit History</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body border-0 p-4">
+                <div id="editHistoryList{{ journey_id }}" class="timeline">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.timeline {
+    position: relative;
+}
+
+.timeline-item {
+    position: relative;
+    margin-bottom: 2rem;
+}
+
+.timeline-item:last-child {
+    margin-bottom: 0;
+}
+
+.timeline-item::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 18px;
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    background: #fff;
+    border: 4px solid #b0b0b0;
+    z-index: 2;
+    transition: border-color 0.3s;
+}
+
+.timeline-item.latest::before {
+    border-color: #0d6efd;
+    background: #0d6efd;
+}
+
+.timeline-content {
+    margin-left: 40px;
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    position: relative;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+}
+
+.timeline-item.latest .timeline-content {
+    background: #e7f1ff;
+    border: 1.5px solid #0d6efd;
+}
+
+.timeline-content .d-flex {
+    align-items: center;
+}
+
+.timeline-content img {
+    width: 32px;
+    height: 32px;
+    object-fit: cover;
+    border-radius: 50%;
+    margin-right: 10px;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #0d6efd33;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const journeyId = '{{ journey_id }}';
+    const editHistoryList = document.getElementById('editHistoryList' + journeyId);
+    
+    // Load editing history
+    async function loadEditHistory() {
+        try {
+            const response = await fetch(`/journey/edit/history?journey_id=${journeyId}`);
+            const data = await response.json();
+            
+            if (data.success && data.history) {
+                editHistoryList.innerHTML = data.history.map((record, index) => {
+                    let contentHtml = '';
+                    if (record.edit_content) {
+                        contentHtml = record.edit_content.map(content => {
+                            let fieldName = content.field.charAt(0).toUpperCase() + content.field.slice(1);
+                            return `
+                                <div class="mt-2">
+                                    <small class="text-muted">${fieldName}:</small>
+                                    <div class="d-flex align-items-center flex-wrap">
+                                        <div class="text-decoration-line-through text-danger me-2" style="word-break: break-all; white-space: pre-wrap; max-width: 40vw;">${content.old}</div>
+                                        <i class="bi bi-arrow-right text-muted mx-2"></i>
+                                        <div class="text-success" style="word-break: break-all; white-space: pre-wrap; max-width: 40vw;">${content.new}</div>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                    
+                    let avatarHtml = '';
+                    if (record.profile_image) {
+                        avatarHtml = `
+                            <div class="d-flex align-items-center justify-content-center overflow-hidden rounded-4"
+                                 style="width: 40px; height: 40px;">
+                                <a href="/profile/${record.user_id}" title="View profile">
+                                    <img src="/static/file/uploads/${record.profile_image}" alt="Avatar"
+                                         style="width: 100%; height: 100%; object-fit: cover;">
+                                </a>
+                            </div>
+                        `;
+                    } else {
+                        let firstLetter = record.first_name ? record.first_name[0].toUpperCase() : '';
+                        avatarHtml = `
+                            <div class="rounded-4 text-black d-flex align-items-center justify-content-center border-0"
+                                 style="width: 40px; height: 40px; background-color: var(--bs-dark-bg-subtle)">
+                                <a href="/profile/${record.user_id}" class="text-decoration-none text-black">
+                                    ${firstLetter ? `<span class="fs-4">${firstLetter}</span>` : `<i class="bi bi-person" style="font-size: 20px;"></i>`}
+                                </a>
+                            </div>
+                        `;
+                    }
+                    
+                    return `
+                        <div class="timeline-item ${index === 0 ? 'latest' : ''}">
+                            <div class="timeline-content">
+                                <div class="d-flex align-items-center mb-2">
+                                    ${avatarHtml}
+                                    <div class="ms-1">
+                                        <h6 class="mb-0">${record.first_name} ${record.last_name}</h6>
+                                        <small class="text-muted">${new Date(record.created_at).toLocaleString()}</small>
+                                    </div>
+                                </div>
+                                <p class="mb-0 text-secondary">${record.edit_reason}</p>
+                                ${contentHtml}
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            } else {
+                editHistoryList.innerHTML = '<div class="text-center text-muted">No edit history found</div>';
+            }
+        } catch (error) {
+            console.error('Error loading edit history:', error);
+            editHistoryList.innerHTML = '<div class="text-center text-danger">Error loading edit history</div>';
+        }
+    }
+    
+    const modal = document.getElementById('journeyEditHistoryModal' + journeyId);
+    modal.addEventListener('show.bs.modal', loadEditHistory);
+});
+</script> 

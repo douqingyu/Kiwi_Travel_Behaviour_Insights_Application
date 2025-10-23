@@ -1,0 +1,115 @@
+{# Journey Card Component #}
+<div class="mt-2" data-journey-id="{{ journey.id }}">
+    <div class="card border-0 shadow-sm rounded-4">
+        {% if journey.cover_photo %}
+        <div class="position-relative">
+            <img src="{{ url_for('static', filename='file/uploads/' + journey.cover_photo) }}"
+                 alt="Journey Cover"
+                 class="img-fluid rounded-top-4 w-100"
+                 style="max-height: 180px; object-fit: cover;">
+        </div>
+        {% else %}
+        <div class="position-relative d-flex align-items-center justify-content-center rounded-top-4 w-100"
+             style="height: 180px; background: #a2a1a1; color: #ffffff;">
+            <span class="fs-1 fw-bold text-center">{{ journey.first_name }} 's Journey</span>
+        </div>
+        {% endif %}
+        <div class="card-body">
+            <div class="row g-0">
+                <div class="col-auto">
+                    {% with profile_image=journey.profile_image, first_name=journey.first_name, show_avatar_modal=True,
+                    size=40,
+                    user_id=journey.user_id %}
+                    {% include 'components/avatar_lg.html' %}
+                    {% endwith %}
+                </div>
+                <div class="col ms-2"
+                     onclick="window.location.href='/journey/detail/{{ journey.id }}?tab={{ tab|default('public') }}'">
+                    <div class="row">
+                        <div class="col">
+                            <div>
+                                <strong class="fs-6">{{ journey.first_name }} {{ journey.last_name }}</strong>
+                            </div>
+                            <div>
+                                <span class="text-muted" style="font-size: 0.85rem;">{{ journey.start_date.strftime('%d/%m/%Y')}}</span>
+                            </div>
+                        </div>
+                        <div class="col-auto ms-auto d-flex align-items-center gap-2">
+                            {% if session.get('user_id') and session.get('user_id') != journey.user_id %}
+                            <button class="btn btn-link p-0 follow-btn" 
+                                    data-journey-id="{{ journey.id }}"
+                                    data-is-following="{{ journey.is_following|default(false)|string|lower }}"
+                                    onclick="event.stopPropagation(); toggleFollow(this)">
+                                <i class="bi bi-bell{% if journey.is_following %} text-danger{% else %} text-muted{% endif %} fs-5"></i>
+                            </button>
+                            {% endif %}
+                            {% if show_options|default(true) %}
+                            {% include "components/journey_option.html" %}
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="mt-1 journey-content">
+                        <div>
+                            <span class="mt-1">
+                                {% if small_card|default(false) %}
+                                {{ journey.title[:36] }}
+                                    {% if journey.title|length > 36 %}
+                                    ...{% endif %}
+                                {% else %}
+                                    {{ journey.title }}
+                                {% endif %}
+                            </span>
+                        </div>
+                        <div>
+                            <span class="text-secondary">
+                                {% if small_card|default(false) %}
+                                {{ journey.description[:36] }}
+                                    {% if journey.description|length > 36 %}
+                                    ...{% endif %}
+                                {% else %}
+                                    {{ journey.description }}
+                                {% endif %}
+                            </span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function toggleFollow(btn) {
+    const journeyId = btn.dataset.journeyId;
+    const isFollowing = btn.dataset.isFollowing === 'true';
+    
+    // send message
+    fetch('/journey/follow', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `journey_id=${journeyId}`
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            btn.dataset.isFollowing = data.is_following;
+            const icon = btn.querySelector('i');
+            if (data.is_following) {
+                icon.classList.remove('text-muted');
+                icon.classList.add('text-danger');
+            } else {
+                icon.classList.remove('text-danger');
+                icon.classList.add('text-muted');
+            }
+        } else {
+            showMessage(data.message || 'error', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        showMessage('error', 'error');
+    });
+}
+</script> 

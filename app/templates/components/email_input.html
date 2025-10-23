@@ -1,0 +1,16 @@
+{#email input component#}
+<div class="mb-3">
+    <input type="email"
+           class="form-control rounded-3 border-0 bg-body-secondary{% if email_error %} is-invalid{% endif %}"
+           pattern="^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,320}$"
+           maxlength="320"
+           placeholder="email address"
+           id="email-input" name="email" value="{{ email }}" required>
+    <div class="invalid-feedback">
+        {% if email_error %}
+            {{ email_error }}
+        {% else %}
+            Please enter a valid email address (e.g., example@domain.com) with a maximum of 320 characters.
+        {% endif %}
+    </div>
+</div>

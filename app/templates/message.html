@@ -1,0 +1,293 @@
+{% extends 'userbase.html' %}
+
+{% block title %}Messages{% endblock %}
+
+{% block user_head %}
+    <script>
+        // Global variables
+        let currentConversationId = null;
+        const currentUserId = "{{ session.user_id|default('') }}";
+
+        // Handle conversation clicks
+        function handleConversationClick(element, conversationId) {
+            console.log('click conversation:', conversationId);
+
+            // Remove all highlights
+            document.querySelectorAll('.conversation-item').forEach(function (item) {
+                item.classList.remove('bg-light');
+            });
+
+            // Add current item highlight
+            element.classList.add('bg-light');
+
+            // Load conversation content
+            loadConversation(conversationId);
+        }
+
+        // Load conversation content
+        async function loadConversation(conversationId) {
+            if (!conversationId) {
+                console.error('error');
+                return;
+            }
+
+            console.log('conversation ID:', conversationId);
+            console.log('user ID:', currentUserId);
+            currentConversationId = conversationId;
+
+            // Show message container, hide "No conversation selected" prompt
+            document.getElementById('message-container').classList.remove('d-none');
+            document.getElementById('no-conversation-selected').classList.add('d-none');
+
+            // Get the selected conversation element
+            const convItem = document.getElementById(`conv-${conversationId}`);
+            if (!convItem) {
+                console.error('system error');
+                return;
+            }
+
+            // Get username and avatar information
+            const nameElement = convItem.querySelector('h6');
+            const avatarElement = convItem.querySelector('.avatar-container');
+            console.log('can not find:', nameElement);
+            console.log('can not find:', avatarElement);
+
+            // Update current chat information.
+            if (nameElement) {
+                document.getElementById('current-chat-username').textContent = nameElement.textContent;
+            }
+
+            // Upate avatar
+            const avatarContainer = document.querySelector('.card-header .d-flex');
+            if (avatarContainer) {
+                const avatarHtml = avatarElement ? avatarElement.outerHTML : '';
+                avatarContainer.innerHTML = avatarHtml + `<h5 id="current-chat-username" class="mb-0 ms-3">${nameElement ? nameElement.textContent : ''}</h5>`;
+            }
+
+            // Get message from server
+            console.log('get URL:', `/messages/${conversationId}`);
+            const messages = await apiRequest(`/messages/${conversationId}`, 'GET').then(data => {
+                if (data.success) {
+                    displayMessages(data.messages);
+                } else {
+                    throw new Error(data.error || 'failed to get message');
+                }
+            });
+        }
+
+        // Show message list
+        function displayMessages(messages) {
+            const messagesList = document.getElementById('messages-list');
+            // Empty message list
+            messagesList.innerHTML = '';
+
+            if (!Array.isArray(messages)) {
+                console.error('What is received is not an array:', messages);
+                messagesList.innerHTML = '<div class="alert alert-warning">message form error</div>';
+                return;
+            }
+
+            if (messages.length === 0) {
+                messagesList.innerHTML = '<div class="text-center text-muted p-3">no message</div>';
+                return;
+            }
+
+            // Add each message
+            messages.forEach(function (msg) {
+                if (!msg || !msg.sender_id || !msg.content) {
+                    console.warn('Message data incomplete:', msg);
+                    return;
+                }
+
+                const isCurrentUser = String(msg.sender_id) === currentUserId;
+                const time = new Date(msg.created_at).toLocaleTimeString();
+                
+                const avatarHtml = `
+                    <div class="d-flex align-items-center justify-content-center overflow-hidden rounded-4"
+                         style="width: 32px; height: 32px;">
+                        ${msg.sender_profile_image ? 
+                            `<a href="/profile/${msg.sender_id}" title="View profile">
+                                <img src="/static/file/uploads/${msg.sender_profile_image}" alt="Avatar"
+                                     style="width: 100%; height: 100%; object-fit: cover;">
+                            </a>` :
+                            `<div class="rounded-4 text-black d-flex align-items-center justify-content-center border-0"
+                                  style="width: 32px; height: 32px; background-color: var(--bs-dark-bg-subtle)">
+                                <a href="/profile/${msg.sender_id}" class="text-decoration-none text-black">
+                                    <i class="bi bi-person" style="font-size: 16px;"></i>
+                                </a>
+                            </div>`
+                        }
+                    </div>
+                `;
+
+                const msgHtml = `
+                    <div class="message ${isCurrentUser ? 'text-end' : ''} mb-3">
+                        <div class="d-flex ${isCurrentUser ? 'justify-content-end' : 'justify-content-start'} align-items-end">
+                            ${!isCurrentUser ? `<div class="me-2">${avatarHtml}</div>` : ''}
+                            <div class="d-inline-block p-3 rounded-3 ${isCurrentUser ? 'bg-primary text-white' : 'bg-light'}">
+                                <p class="mb-0">${msg.content}</p>
+                                <small class="text-${isCurrentUser ? 'light' : 'muted'}">${time}</small>
+                            </div>
+                            ${isCurrentUser ? `<div class="ms-2">${avatarHtml}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+
+                messagesList.insertAdjacentHTML('beforeend', msgHtml);
+            });
+
+            // Scroll to the latest message
+            scrollToBottom();
+        }
+
+        // Scroll to the bottom
+        function scrollToBottom() {
+            const container = document.getElementById('messages-container');
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+            }
+        }
+
+        // Initialize after page loading is complete
+        document.addEventListener('DOMContentLoaded', function () {
+            // Message sending form processing
+            const messageForm = document.getElementById('message-form');
+            const messageInput = document.getElementById('message-input');
+
+            if (messageForm) {
+                messageForm.addEventListener('submit', async function (e) {
+                    e.preventDefault();
+
+                    if (!messageInput || !currentConversationId) return;
+
+                    const content = messageInput.value.trim();
+                    if (!content) return;
+
+                    console.log('send message:', content);
+
+                    try {
+                        await apiRequest('/messages/send', 'POST', {
+                            receiver_id: currentConversationId,
+                            content: content
+                        })
+
+                        messageInput.value = '';
+
+                        // reload conversation
+                        loadConversation(currentConversationId);
+                    } catch (error) {
+                        // get error message
+                        showMessage(error.message, 'error');
+                    }
+                });
+            }
+
+            // Check for pre-selected conversations
+            {% if selected_conversation_id %}
+                const preSelectedConvId = "{{ selected_conversation_id }}";
+                console.log('pre-selected conversations ID:', preSelectedConvId);
+
+                if (preSelectedConvId) {
+                    const preSelectedItem = document.getElementById(`conv-${preSelectedConvId}`);
+                    if (preSelectedItem) {
+                        console.log('Trigger pre-selected conversation clicks');
+                        preSelectedItem.click();
+                    }
+                }
+            {% endif %}
+        });
+    </script>
+{% endblock %}
+
+{% block user_content %}
+    <section class="container-fluid pt-5 mt-4">
+        <div class="row g-3">
+            <!-- left conversation list -->
+            <div class="col-md-4">
+                <div class="card shadow-sm border-0 rounded-4">
+                    <div class="card-header bg-white rounded-top-4 p-4">
+                        <h5 class="card-title mb-0">Messages</h5>
+                    </div>
+                    <div class="card-body p-0">
+                        <div id="conversation-list" style="height: calc(100vh - 217px); overflow-y: auto;">
+                            {% for conv in conversations %}
+                                <div id="conv-{{ conv.other_user_id }}"
+                                     class="conversation-item p-3 border-bottom"
+                                     data-conversation-id="{{ conv.other_user_id }}"
+                                     onclick="handleConversationClick(this, '{{ conv.other_user_id }}')"
+                                     style="cursor: pointer; transition: background-color 0.2s;">
+                                    <div class="d-flex align-items-center">
+                                        {% with profile_image=conv.sender_profile_image, first_name=conv.first_name, show_avatar_modal=True, size=48, user_id=conv.other_user_id %}
+                                            <div class="avatar-container">
+                                                {% include 'components/avatar_lg.html' %}
+                                            </div>
+                                        {% endwith %}
+                                        <div class="flex-grow-1 ms-3">
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <h6 class="mb-0">{{ conv.first_name }} {{ conv.last_name }}</h6>
+                                                <small class="text-muted">{{ conv.last_message_time|datetime }}</small>
+                                            </div>
+                                            <p class="mb-0 text-muted text-truncate" style="max-width: 200px;">
+                                                {{ conv.last_message }}
+                                            </p>
+                                        </div>
+                                        {% if conv.unread_count > 0 %}
+                                            <span class="badge bg-primary rounded-pill ms-2">{{ conv.unread_count }}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- right area -->
+            <div class="col-md-8">
+                <div class="card shadow-sm border-0 rounded-4 d-none" id="message-container" >
+                    <div class="card-header bg-white rounded-top-4">
+                        <div class="d-flex align-items-center">
+                            {% if current_chat_user_id %}
+                                {% with profile_image=current_chat_profile_image, first_name=current_chat_first_name, show_avatar_modal=True, size=40, user_id=current_chat_user_id %}
+                                    {% include 'components/avatar_lg.html' %}
+                                {% endwith %}
+                            {% endif %}
+                            <h5 id="current-chat-username" class="mb-0 ms-3"></h5>
+                        </div>
+                    </div>
+
+                    <div class="card-body p-0">
+                        <div id="messages-container" class="p-3"
+                             style="height: calc(100vh - 275px); overflow-y: auto;">
+                            <div id="messages-list"></div>
+                        </div>
+                    </div>
+
+                    <div class="card-footer bg-white rounded-bottom-4 p-2">
+                        <form id="message-form">
+                            <div class="input-group rounded-pill overflow-hidden">
+                                <input type="text"
+                                       class="form-control border-0 shadow-none"
+                                       id="message-input"
+                                       placeholder="Type a message..."
+                                       style="border-radius: 50px 0 0 50px;">
+                                <button type="submit" class="btn d-flex align-items-center justify-content-center p-0"
+                                        style="background: none; border: none; border-radius: 50%; min-width:48px; min-height:48px;">
+                                    <i class="bi bi-send" style="font-size: 1.5rem; color: #0d6efd;"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                <div id="no-conversation-selected"
+                     class="card shadow-sm rounded-4 h-100 d-flex align-items-center justify-content-center">
+                    <div class="text-center text-muted p-5">
+                        <i class="fas fa-comments fa-3x mb-3"></i>
+                        <h4>Select a conversation to start messaging</h4>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+{% endblock %}

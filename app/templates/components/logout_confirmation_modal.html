@@ -1,0 +1,29 @@
+<!-- Logout Confirmation Modal -->
+<div class="modal fade" id="logoutModal" tabindex="-1" aria-labelledby="logoutModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4">
+            <div class="modal-header bg-black text-white border-0 rounded-top-4">
+                <h5 class="modal-title" id="logoutModalLabel">Confirm Logout</h5>
+            </div>
+            <div class="modal-body border-0">
+                Are you sure you want to log out?
+            </div>
+            <div class="modal-footer border-0">
+                <button type="button" class="btn rounded-5 px-3" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger rounded-5 px-3" id="logoutBtn">Log Out</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('logoutBtn').addEventListener('click', async function() {
+    try {
+        await apiRequest('{{ url_for("logout") }}', 'POST');
+        location.reload(); // Reload the page to reflect the logout
+    } catch (error) {
+        console.error('Logout failed:', error);
+        showMessage('Logout failed. Please try again.', 'error');
+    }
+});
+</script>

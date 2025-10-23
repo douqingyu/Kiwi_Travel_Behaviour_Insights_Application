@@ -1,0 +1,121 @@
+{# Image Upload Component #}
+<div class="mb-3">
+    <label class="form-label text-secondary">{{ label|default('Upload Image') }}</label>
+    <div class="w-100">
+        <div id="{{ upload_area_id|default('imageUploadArea') }}"
+             class="image-upload-area d-flex cursor-pointer align-items-center justify-content-center w-100 rounded-4 border border-secondary"
+             style="aspect-ratio: 1; border-width: 2px !important; border-style: dashed !important;"
+             {% if initial_image_url %}class="d-none"{% endif %}>
+            <input type="file" class="d-none" id="{{ file_input_id|default('imageInput') }}" name="{{ input_name|default('image') }}"
+                   accept="image/*">
+            <div class="text-center text-secondary">
+                <i class="bi bi-plus-circle-fill fs-1 mb-2 d-block text-secondary"></i>
+                <span>Click to upload image</span>
+            </div>
+        </div>
+        <div id="{{ preview_id|default('imagePreview') }}"
+             {% if not initial_image_url %}class="d-none"{% endif %}>
+            <div class="position-relative" style="aspect-ratio: 1;">
+                <img id="{{ image_id|default('previewImage') }}" 
+                     src="{{ initial_image_url if initial_image_url else '' }}" 
+                     alt="Preview" 
+                     class="img-fluid rounded-4 w-100 h-100" 
+                     style="object-fit: cover;">
+                <button type="button" id="{{ clear_btn_id|default('clearImageBtn') }}"
+                        class="btn position-absolute top-0 end-0 m-2 border-0 fs-6 rounded-5 d-flex align-items-center justify-content-center"
+                        style="width: 32px; height: 32px; background: rgba(90,90,90,0.5); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px); border: 1px solid rgba(255, 255, 255, 0.2);"
+                        data-bs-toggle="tooltip"
+                        data-bs-placement="left"
+                        title="Remove">
+                    <i class="bi bi-x-lg text-white"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .image-upload-area:hover {
+        border-color: var(--bs-black);
+        background-color: var(--bs-dark-bg-subtle);
+    }
+</style>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        // Get elements
+        const uploadArea = document.getElementById('{{ upload_area_id|default('imageUploadArea') }}');
+        const fileInput = document.getElementById('{{ file_input_id|default('imageInput') }}');
+        const previewDiv = document.getElementById('{{ preview_id|default('imagePreview') }}');
+        const previewImage = document.getElementById('{{ image_id|default('previewImage') }}');
+        const clearBtn = document.getElementById('{{ clear_btn_id|default('clearImageBtn') }}');
+
+        // Click upload area to trigger file selection
+        uploadArea.addEventListener('click', function () {
+            fileInput.click();
+        });
+
+        // Handle file selection
+        fileInput.addEventListener('change', async function (e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            // Check file type
+            const allowedTypes = ['image/jpeg', 'image/png'];
+            if (!allowedTypes.includes(file.type)) {
+                showMessage('Please upload a .jpg, .jpeg, or .png file', 'error');
+                return;
+            }
+
+            // Check file size (2MB limit)
+            if (file.size > 2 * 1024 * 1024) {
+                showMessage('File size must be less than 2MB', 'error');
+                return;
+            }
+
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('{{ url_for("upload_photo") }}', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                if (data.success && data.filename) {
+                    previewImage.src = `/static/file/uploads/${data.filename}`;
+                    previewDiv.classList.remove('d-none');
+                    uploadArea.classList.add('d-none');
+                    
+                    // Trigger custom event
+                    const event = new CustomEvent('imageUploaded', {
+                        detail: { filename: data.filename }
+                    });
+                    document.dispatchEvent(event);
+                } else {
+                    showMessage(data.error || 'Failed to upload image', 'error');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                showMessage('Failed to upload image: ' + error.message, 'error');
+            }
+        });
+
+        // Handle clear image button click event
+        clearBtn.addEventListener('click', function () {
+            previewImage.src = '';
+            previewDiv.classList.add('d-none');
+            uploadArea.classList.remove('d-none');
+            fileInput.value = '';
+            
+            // Trigger custom event
+            const event = new CustomEvent('imageCleared');
+            document.dispatchEvent(event);
+        });
+    });
+</script> 

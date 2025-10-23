@@ -1,0 +1,12 @@
+{#description input component#}
+<div class="mb-3">
+    <textarea class="form-control rounded-3 border-0 bg-body-secondary" id="description-input" name="description"
+              rows="4">{{ description if description else '' }}</textarea>
+    <div class="invalid-feedback">
+        {% if description_error %}
+            {{ description_error }}
+        {% else %}
+            Please enter a valid description.
+        {% endif %}
+    </div>
+</div>

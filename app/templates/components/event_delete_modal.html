@@ -1,0 +1,42 @@
+<div class="modal fade" id="eventDeleteModal{{ event_id }}" tabindex="-1" aria-labelledby="eventDeleteModalLabel{{ event_id }}"
+     aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content border-0 rounded-4">
+            <div class="modal-header bg-danger text-white border-0 rounded-top-4 px-4">
+                <h5 class="modal-title" id="eventDeleteModalLabel{{ event_id }}">Confirm Delete</h5>
+            </div>
+            <div class="modal-body border-0 p-4">
+                <p>Are you sure you want to delete this event? This action cannot be undone.</p>
+                <p class="text-danger mt-2" id="eventDeleteTitle"></p>
+            </div>
+            <div class="modal-footer border-0 p-4">
+                <button type="button" class="btn rounded-5 px-3" data-bs-dismiss="modal">Cancel</button>
+                <form action="{{ url_for('event_delete') }}" method="POST" class="d-inline">
+                    <input type="hidden" name="id" id="eventDeleteId">
+                    <input type="hidden" name="journey_id" id="journeyDeleteId">
+                    <button type="submit" class="btn btn-danger rounded-5 px-3">Delete</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const eventDeleteModal = document.getElementById('eventDeleteModal{{ event_id }}');
+        const eventDeleteTitle = document.getElementById('eventDeleteTitle');
+        const eventDeleteId = document.getElementById('eventDeleteId');
+        const journeyDeleteId = document.getElementById('journeyDeleteId');
+
+        eventDeleteModal.addEventListener('show.bs.modal', function (event) {
+            const button = event.relatedTarget;
+            const eventId = button.getAttribute('data-event-id');
+            const eventTitle = button.getAttribute('data-event-title');
+            const journeyId = document.querySelector('[data-journey-id]').getAttribute('data-journey-id');
+            
+            eventDeleteTitle.textContent = eventTitle;
+            eventDeleteId.value = eventId;
+            journeyDeleteId.value = journeyId;
+        });
+    });
+</script> 

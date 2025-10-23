@@ -1,0 +1,267 @@
+{% extends 'userbase.html' %}
+
+{% block title %}User Management{% endblock %}
+
+{# Set the active page to be highlighted in the navigation bar. #}
+{% set active_page = 'userManagement' %}
+
+{% block user_content %}
+    <div>
+        <div class="shadow-sm p-5 mt-5 bg-white">
+            <form id="filterForm" method="post" action="/admin/user/management">
+                <div class="row g-3 justify-content-center">
+                    <div class="col-4 col-md-3 col-lg-2">
+                        <label for="statusSelect" class="form-label">Status</label>
+                        <select class="form-select rounded-5 border-0 bg-body-secondary" name="status" id="statusSelect"
+                                onchange="this.form.submit()">
+                            <option value="" {% if status == "" %}selected{% endif %}>All</option>
+                            <option value="active" {% if status == "active" %}selected{% endif %}>Active</option>
+                            <option value="banned" {% if status == "banned" %}selected{% endif %}>Banned</option>
+                        </select>
+                    </div>
+                    <div class="col-4 col-md-3 col-lg-2">
+                        <label for="roleSelect" class="form-label">Role</label>
+                        <select class="form-select rounded-5 border-0 bg-body-secondary" name="role" id="roleSelect"
+                                onchange="this.form.submit()">
+                            <option value="" {% if role == "" %}selected{% endif %}>All</option>
+                            <option value="traveller" {% if role == "traveller" %}selected{% endif %}>Traveller</option>
+                            <option value="editor" {% if role == "editor" %}selected{% endif %}>Editor</option>
+                            <option value="moderator" {% if role == "moderator" %}selected{% endif %}>Moderator</option>
+                            <option value="admin" {% if role == "admin" %}selected{% endif %}>Admin</option>
+                            <option value="support_techs" {% if role == "support_techs" %}selected{% endif %}>Support Techs</option>
+                        </select>
+                    </div>
+                    <div class="col-4 col-md-3 col-lg-2">
+                        <label for="canShareSelect" class="form-label">Share</label>
+                        <select class="form-select rounded-5 border-0 bg-body-secondary" name="can_share" id="canShareSelect"
+                                onchange="this.form.submit()">
+                            <option value="" {% if can_share == "" %}selected{% endif %}>All</option>
+                            <option value="1" {% if can_share == "1" %}selected{% endif %}>Can Share</option>
+                            <option value="0" {% if can_share == "0" %}selected{% endif %}>Cannot Share</option>
+                        </select>
+                    </div>
+                    <div class="col-sm-12 col-md-6 col-lg-5 w-auto">
+                        <label for="keyword" class="form-label">Search</label>
+                        <div class="input-group flex-nowrap">
+                            <!-- search select -->
+                            <select class="form-select rounded-start-pill w-auto flex-shrink-1 border-0 bg-body-secondary" id="search_type"
+                                    name="search_type">
+                                <option value="first_name" {{ 'selected' if search_type == 'first_name' else '' }}>First
+                                    Name
+                                </option>
+                                <option value="last_name" {{ 'selected' if search_type == 'last_name' else '' }}>Last
+                                    Name
+                                </option>
+                                <option value="email" {{ 'selected' if search_type == 'email' else '' }}>Email
+                                </option>
+                                <option value="username" {{ 'selected' if search_type == 'username' else '' }}>Username
+                                </option>
+                            </select>
+                            <!-- search input -->
+                            <div class="position-relative flex-grow-1">
+                                <input type="text" class="form-control h-100 pe-5 rounded-0 border-0 bg-body-secondary" id="keyword" name="keyword"
+                                       placeholder="Enter keyword"
+                                       value="{{ keyword if keyword else '' }}">
+                                <!-- clear button -->
+                                <button type="button"
+                                        class="btn btn-link position-absolute end-0 top-50 translate-middle-y me-3 p-0"
+                                        onclick="document.getElementById('keyword').value=''; this.form.submit()">
+                                    <i class="bi bi-x-circle-fill text-muted fs-5"></i>
+                                </button>
+                            </div>
+                            <!-- search button -->
+                            <button type="submit" class="btn btn-dark rounded-end-pill px-4 flex-shrink-1">Search
+                            </button>
+                        </div>
+                        <div class="invalid-feedback">Please enter a valid keyword</div>
+                    </div>
+                </div>
+            </form>
+        </div>
+        <section class="m-3 text-center mw-100">
+            <div class="row g-2">
+                {% if users %}
+                    {% for user in users %}
+                        <div class="col-sm-12 col-md-6 col-lg-4">
+                            <div class="card border-0 shadow-sm rounded-4">
+                                <div class="row g-0">
+                                    <div class="col-auto d-flex align-items-center justify-content-center ms-3">
+                                        {% with profile_image=user.profile_image, first_name=user.first_name, show_avatar_modal=True, size=80, user_id=user.id %}
+                                            {% include 'components/avatar_lg.html' %}
+                                        {% endwith %}
+                                    </div>
+                                    <div class="col">
+                                        <div class="card-body text-start">
+                                            <div class="row">
+                                                <div class="col">
+                                                    <strong class="{% if session.user_id == user.id %}text-black{% endif %}">{{ user.first_name }} {{ user.last_name }}</strong>
+                                                </div>
+                                                <div class="col-auto text-end">
+                                                    <a class="btn bg-white text-black border-0"
+                                                       data-bs-toggle="modal"
+                                                       data-bs-target="#userDetailModal"
+                                                       data-user-id="{{ user.id }}">
+                                                        <i class="bi bi-eye"></i>
+                                                    </a>
+                                                    <a class="btn bg-white text-black border-0"
+                                                       data-bs-toggle="modal"
+                                                       data-bs-target="#adminEditUserModal"
+                                                       data-user-id="{{ user.id }}"
+                                                       data-user-username="{{ user.username }}"
+                                                       data-user-role="{{ user.role }}"
+                                                       data-user-status="{{ user.status }}"
+                                                       data-user-can-share="{{ 'true' if user.can_share else 'false' }}">
+                                                        <i class="bi bi-pencil-square"></i>
+                                                    </a>
+                                                    {% if user.current_subscription %}
+                                                        <a class="btn bg-white text-warning border-0" disabled>
+                                                            <i class="bi bi-gift"></i>
+                                                        </a>
+                                                    {% else %}
+                                                        <a class="btn bg-white text-black border-0"
+                                                           onclick="showGrantSubscriptionModal('{{ user.id }}', '{{ user.username }}')">
+                                                            <i class="bi bi-gift"></i>
+                                                        </a>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            <div class="row">
+                                                <div class="col-8">
+                                                </div>
+
+                                                <div class="d-flex align-items-center">
+                                                <span class=><i
+                                                        class="bi bi-person"></i>&nbsp; {{ user.username }}</span>
+                                                </div>
+                                                <div class="d-flex align-items-center">
+                                                    <span class=><i
+                                                            class="bi bi-envelope"></i>&nbsp; {{ user.email }}</span>
+                                                </div>
+
+                                                <div class="text-end">
+                                            <span class="badge {% if user.role == 'admin' %}bg-warning{% elif user.role == 'editor' %}bg-info{% elif user.role == 'moderator' %}bg-success{% elif user.role == 'traveller' %}bg-primary{% elif user.role == 'support_techs' %}bg-secondary{% else %}bg-danger{% endif %}"
+                                                  id="roleText{{ user.id }}">{{ user.role }}</span>
+                                                    <span class="badge {% if user.status == 'active' %}bg-success{% else %}bg-danger{% endif %}"
+                                                          id="statusText{{ user.id }}">{{ user.status }}</span>
+                                                    <span class="badge {% if user.can_share %}bg-success{% else %}bg-danger{% endif %}"
+                                                          id="canShareText{{ user.id }}">{% if user.can_share %}Can
+                                                        Share{% else %}Cannot Share{% endif %}</span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <div class="col-12 text-center mt-5">
+                        <i class="bi bi-info-circle me-2"></i>
+                        No users found matching the current filter criteria.
+                    </div>
+                {% endif %}
+            </div>
+
+
+            <!-- pagination -->
+            <div id="pagination-container" class="d-flex justify-content-center mt-2 py-2"
+                 data-action="/admin/user/management">
+                {% include 'components/pagination.html' %}
+            </div>
+        </section>
+
+        {% include "components/admin_edit_user_modal.html" %}
+        {% include "components/user_detail_modal.html" %}
+    </div>
+
+    <!-- 授予订阅模态框 -->
+    <div class="modal fade" id="grantSubscriptionModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content rounded-4">
+                <div class="modal-header">
+                    <h5 class="modal-title">Grant Free Subscription</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="grantSubscriptionForm">
+                        <input type="hidden" id="userId" name="user_id">
+                        <div class="mb-3">
+                            <label class="form-label">User</label>
+                            <input type="text" class="form-control" id="username" readonly>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Subscription Duration</label>
+                            <select class="form-select" id="subscriptionDuration">
+                                <option value="1">1 Month</option>
+                                <option value="3">3 Months</option>
+                                <option value="12">12 Months</option>
+                            </select>
+                        </div>
+                        <div class="alert alert-info">
+                            <i class="bi bi-info-circle me-2"></i>
+                            This will grant a free subscription to the user for the selected duration.
+                        </div>
+                    </form>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="button" class="btn btn-primary" onclick="grantSubscription()">Grant Free Subscription</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showGrantSubscriptionModal(userId, username) {
+            document.getElementById('userId').value = userId;
+            document.getElementById('username').value = username;
+            new bootstrap.Modal(document.getElementById('grantSubscriptionModal')).show();
+        }
+
+        function grantSubscription() {
+            const userId = document.getElementById('userId').value;
+            const duration = document.getElementById('subscriptionDuration').value;
+            
+            apiRequest('/admin/grant-subscription', 'POST', {
+                user_id: userId,
+                months: parseInt(duration)
+            })
+            .then(data => {
+                if (data.success) {
+                    showMessage('Free subscription granted successfully!', 'success');
+                    window.location.reload();
+                } else {
+                    showMessage(data.error || 'Failed to grant free subscription', 'error');
+                }
+            })
+            .catch(error => {
+                console.error('Error details:', error);
+                showMessage(error.message || 'An error occurred while granting free subscription', 'error');
+            });
+        }
+
+        function toggleUserStatus(userId, currentStatus) {
+            const newStatus = currentStatus === 'active' ? 'banned' : 'active';
+            const confirmMessage = newStatus === 'banned' ? 
+                'Are you sure you want to ban this user?' : 
+                'Are you sure you want to unban this user?';
+            
+            if (confirm(confirmMessage)) {
+                apiRequest('/admin/toggle-user-status', 'POST', {
+                        user_id: userId,
+                        status: newStatus
+                })
+                .then(data => {
+                    if (data.success) {
+                        window.location.reload();
+                    } else {
+                        showMessage(data.error || 'Failed to update user status', 'error');
+                    }
+                })
+                .catch(error => {
+                    showMessage('An error occurred while updating user status', 'error');
+                });
+            }
+        }
+    </script>
+{% endblock %}
