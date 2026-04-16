@@ -1,8 +1,8 @@
-# Premium Online Travel Journal
+# Travel Behaviour Analytics Application
 
 ## Project Overview
 
-This project is a premium travel journal management system that allows users to record their travel experiences, share journeys and events, and communicate with other travelers. The system supports user management, journey management, event recording, subscription services, and premium features including published journeys, multiple images per event, and journey cover images.
+This project is a travel behaviour analytics application that captures and structures user journey data, enabling analysis of travel patterns, event frequency, and destination trends. The system supports user management, journey and event recording, and subscription-based access to advanced analytics features including published journeys, multi-image event tracking, and journey performance insights.
 
 ## Online Demo
 
