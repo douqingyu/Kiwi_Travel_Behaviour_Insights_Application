@@ -1,8 +1,8 @@
-# Travel Behaviour Analytics Application
+# Kiwi Travel Behaviour Analytics Application
 
 ## Project Overview
 
-This project is a travel behaviour analytics application that captures and structures user journey data, enabling analysis of travel patterns, event frequency, and destination trends. The system supports user management, journey and event recording, and subscription-based access to advanced analytics features including published journeys, multi-image event tracking, and journey performance insights.
+This project is a Kiwi travel behaviour analytics application that captures and structures user journey data, enabling analysis of Kiwi travel patterns, event frequency, and destination trends. The system supports user management, journey and event recording, and subscription-based access to advanced analytics features including published journeys, multi-image event tracking, and journey performance insights.
 
 ## Online Demo
 
